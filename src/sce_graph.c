@@ -9,6 +9,7 @@
 #include "gs.h"
 #include "log.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #define GS_FRAME_1 0x4C
@@ -144,6 +145,11 @@ s32 sceGsSyncV(s32 mode) {
     (void)mode;
     display_vsync();
     g_field ^= 1;
+    {   /* CSR: VSINT (bit 3) and FIELD (bit 13) */
+        extern void gs_priv_reg_set(uint32_t offset, uint64_t v);
+        extern uint64_t gs_priv_reg(uint32_t offset);
+        gs_priv_reg_set(0x1000, (gs_priv_reg(0x1000) & ~((uint64_t)1 << 13)) | 8 | ((uint64_t)g_field << 13));
+    }
     if (!in_vblank) {                /* a handler that waits for the next v-blank mustn't recurse */
         in_vblank = 1;
         if (g_vsync_callback) g_vsync_callback(2);
