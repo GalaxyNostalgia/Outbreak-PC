@@ -1,9 +1,8 @@
 #ifndef STUBS_H
 #define STUBS_H
 
-#include <stdint.h>
-
-/* Called by generated stubs for game functions that aren't decompiled yet. */
-void pc_unimplemented(uint32_t addr, const char *name);
+/* Called by the generated stubs (build/gen/stubs.c) for game functions that
+   aren't decompiled yet. Prints the name and stops. */
+void pc_unimplemented(const char *name);
 
 #endif

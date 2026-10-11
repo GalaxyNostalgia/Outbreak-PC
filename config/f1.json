@@ -1,0 +1,8 @@
+{
+  "_comment": "How tools/gen_data.py treats Biohazard Outbreak (SLPM_654.28) data. Addresses are PS2 addresses.",
+  "raw": [["0x001D9B00", "0x001ED8B0"]],
+  "_raw": "VU microcode, then EE kernel-mode code copied to 0x8007xxxx at boot: bytes, never pointers",
+  "overlays": ["game"],
+  "pointer": [],
+  "number": []
+}

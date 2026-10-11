@@ -1,0 +1,31 @@
+name: ci
+on: [push, pull_request]
+# No game files on CI: these jobs build the platform layer and check the tools.
+# The full game build needs your own disc (see README).
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { shell: 'msys2 {0}' } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          install: mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja
+          suppress-deprecation-warnings: msystem-mingw32
+      - name: Platform layer (32-bit Windows)
+        run: |
+          cmake -S . -B build -G Ninja -DOUTBREAK_PLATFORM_ONLY=ON
+          cmake --build build
+  cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: MinGW cross toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-i686 cmake
+      - name: Platform layer (cross-compiled for Windows)
+        run: |
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DOUTBREAK_PLATFORM_ONLY=ON
+          cmake --build build
+      - name: Tools
+        run: python3 -m py_compile tools/*.py

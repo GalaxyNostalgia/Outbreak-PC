@@ -1,0 +1,4 @@
+/build/
+*.iso
+*.exe
+__pycache__/

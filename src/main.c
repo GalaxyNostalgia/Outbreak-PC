@@ -1,12 +1,11 @@
 /* Biohazard Outbreak PC: entry point.
  *
- * Today this sets up the PS2 side (guest memory, the user's disc, the executable's data)
- * and runs self-tests that call decompiled game code natively. The game's own boot path
- * takes over here as soon as it is decompiled (docs/PCPORT.md).
+ * Opens the user's disc image and calls the game's own main(), decompiled in the
+ * decomp repo (decomp/src/<ELF>/main/main.c). The game's data comes from the user's
+ * executable, converted at build time (tools/gen_data.py). The program stops at the
+ * first function that isn't decompiled yet and names it.
  */
-#include "guest.h"
 #include "iso9660.h"
-#include "loader.h"
 #include "log.h"
 #include "stubs.h"
 
@@ -18,13 +17,14 @@
 #error "build with -DGAME_ELF=\"SLPM_654.28\" (CMake sets it from OUTBREAK_GAME)"
 #endif
 
-/* decompiled game code (src/SLPM_654.28/main/) */
-int func_001A8300(const char *name);
-void func_001BC780(char *dst, const char *name);
-int func_001A87F0(int argc, char **argv);   /* the game's main() */
+/* decompiled game code */
+int func_001A8300(const char *name);           /* disc file size */
+void func_001BC780(char *dst, const char *name); /* "cdrom0:\NAME;1" */
+int func_001A87F0(int argc, char **argv);      /* the game's main() */
 
-void pc_unimplemented(uint32_t addr, const char *name) {
-    log_error("game called %s (0x%08x), which isn't decompiled yet", name, addr);
+void pc_unimplemented(const char *name) {
+    log_error("the game called %s, which isn't decompiled yet", name);
+    fflush(stderr);
     exit(3);
 }
 
@@ -33,7 +33,7 @@ static int self_test(void) {
                                   "PROG\\EDITOR.BIN"};
     int fails = 0;
     char path[0x100];
-    log_info("self-test: calling decompiled disc functions natively");
+    log_info("self-test: decompiled disc functions, running natively");
     func_001BC780(path, "prog\\game.bin");
     log_info("  func_001BC780(\"prog\\\\game.bin\") -> \"%s\"", path);
     if (strcmp(path, "cdrom0:\\PROG\\GAME.BIN;1") != 0) fails++;
@@ -50,6 +50,7 @@ static int self_test(void) {
 int main(int argc, char **argv) {
     const char *iso = NULL;
     int test = 0;
+    setvbuf(stdout, NULL, _IONBF, 0);
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--test")) test = 1;
         else if (argv[i][0] != '-') iso = argv[i];
@@ -58,18 +59,21 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: %s [--test] <your %s disc image.iso>\n", argv[0], GAME_ELF);
         return 2;
     }
-    if (guest_init() != 0 || iso_open(iso) != 0) return 1;
-    uint32_t entry = loader_load_elf(GAME_ELF);
-    if (!entry) return 1;
-    log_info("%s loaded, PS2 entry point 0x%08x", GAME_ELF, entry);
-
+    if (sizeof(void *) != 4) {
+        log_error("this must be a 32-bit build");
+        return 1;
+    }
+    if (iso_open(iso) != 0) return 1;
+    IsoFile elf;
+    if (iso_find(GAME_ELF, &elf) != 0) {
+        log_error("%s isn't on this disc: is it the right game?", GAME_ELF);
+        return 1;
+    }
     if (test) {
         int fails = self_test();
         log_info("self-test %s", fails ? "FAILED" : "passed");
         return fails ? 1 : 0;
     }
-    /* crt0 would now set up the kernel (thread, heap, _InitSys) and call main(argc, argv).
-       On PC the platform layer has done the equivalent; hand over to the game. */
     static char boot[] = "cdrom0:\\" GAME_ELF ";1";
     char *game_argv[] = {boot, NULL};
     log_info("starting the game: main(1, {\"%s\"})", boot);

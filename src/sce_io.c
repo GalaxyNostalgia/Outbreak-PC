@@ -1,6 +1,6 @@
 /* Sony libkernel file I/O (sceOpen/sceRead/sceLseek/sceClose) for the PC port.
  *
- * "cdrom0:\PATH;1" and "pfs0:PATH" (the HDD install) read from the user's disc image;
+ * "cdrom0:\\PATH;1" and "pfs0:PATH" (the HDD install) read from the user's disc image;
  * "host:PATH" and "host0:PATH" read from the folder the game was started in.
  */
 #include "iso9660.h"
