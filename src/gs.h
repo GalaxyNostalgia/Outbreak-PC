@@ -12,6 +12,8 @@
 void gs_reset(void);
 /* Process a GIF packet (GIFtag + data) the game built in memory. Returns the bytes consumed. */
 uint32_t gs_gif_packet(const void *packet);
+/* GIF data as it comes from DMA (PATH2/PATH3): quadwords, packets may be split anywhere. */
+void gs_gif_write(const void *data, uint32_t qwords);
 /* Image data following a TRXDIR=0 transfer (GIF IMAGE mode). */
 void gs_image_data(const void *src, uint32_t bytes);
 /* Privileged display registers (what sceGsPutDispEnv writes). */

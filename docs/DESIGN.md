@@ -59,11 +59,24 @@ what to decompile next.
 | disc image | `iso9660.c` (ISO 9660, files over 4 GB offsets) | done |
 | CD/DVD streaming, CRI file system | disc image reads | to do |
 | graphics: libgraph double buffering, image uploads, display | `sce_graph.c` + `gs.c` (GS video memory with the real pixel layout, GIF packets, sprites) + `display.c` (SDL2 window, 59.94 Hz) | boot screen works |
-| graphics: textured/3D drawing, VIF/VU1 | GS model first, native renderers later | to do |
+| DMA controller, VIF1, GIF paths | `dma.c`: a send runs the whole DMA chain at once (tags, VIF1 DIRECT, GIF packets into the GS model) and then raises the channel's DMA-end interrupt | 2D packets work; VU1 microprograms skipped |
+| graphics: textured/3D drawing, VU1 | GS model first, native renderers later | to do |
+| IOP: reboot, modules, SIF RPC, HDD | `sce_sif.c`: reboot and module loads succeed, the HDD drivers report "no device" | done for boot |
+| EE kernel: interrupt/DMA handlers, semaphores | `kernel.c`: handlers are called where the hardware would raise them (v-blank in `sceGsSyncV`, DMA end after a send) | threads to do |
+| hardware registers (timers, GS privileged registers) | `hw.c` (`HW_REG32`/`HW_REG64` in the decomp) | timers, display registers |
+| hand-written assembly in the game (copy loops) | `asm.c` | as needed |
 | pad, memory card | SDL input; save files | to do |
 | sound (IOP driver, SPU2, CRI ADX) | software mixer + ADX decoder | to do |
 | movies (CRI Sofdec) | FFmpeg | to do |
 | network (DEV9/INET stack, DNAS, KDDI pages) | Winsock + legacy-TLS HTTPS to Obsrv | to do |
+
+## Addresses stay below 0x10000000
+
+The game keeps a type in the top 4 bits of addresses it queues for DMA (and the PS2 itself uses those bits for
+uncached and scratchpad access). So every address the game handles on PC must fit in 28 bits:
+- the program is linked at a fixed low base (0x400000 on Windows, ASLR off; non-PIE on Linux);
+- the game's `malloc` is a heap inside the program image (`src/ps2ram.c`), not the C runtime's;
+- `main.c` refuses to start if any of that ends up higher.
 
 ## Fixed RAM addresses
 

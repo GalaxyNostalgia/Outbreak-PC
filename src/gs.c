@@ -132,49 +132,102 @@ void gs_image_data(const void *src, uint32_t bytes) {
     if (g.trx_y >= h) g.trx_active = 0;
 }
 
+/* GIF: a stream of quadwords, GIF tags followed by their data, which can arrive split across DMA tags. */
+static struct {
+    int in_packet;            /* a tag was read and its data isn't finished */
+    uint32_t nloop, loop, nreg, reg, flg, eop;
+    uint64_t regs;
+} gif;
+
+static void gif_qword(const uint64_t *q) {
+    if (!gif.in_packet) {
+        uint64_t tag = q[0];
+        gif.nloop = (uint32_t)bits(tag, 0, 15);
+        gif.eop = (uint32_t)bits(tag, 15, 1);
+        gif.flg = (uint32_t)bits(tag, 58, 2);
+        gif.nreg = (uint32_t)bits(tag, 60, 4);
+        if (gif.nreg == 0) gif.nreg = 16;
+        gif.regs = q[1];
+        gif.loop = gif.reg = 0;
+        if (bits(tag, 46, 1) && gif.flg == 0) write_reg(0x00, bits(tag, 47, 11));   /* PRE: PRIM */
+        gif.in_packet = gif.nloop != 0;
+        return;
+    }
+    switch (gif.flg) {
+    case 0: {                                                 /* PACKED */
+        uint32_t desc = (uint32_t)((gif.regs >> (4 * gif.reg)) & 15);
+        if (desc == 0x0E) write_reg((uint32_t)(q[1] & 0xFF), q[0]);                       /* A+D */
+        else if (desc == 0x01) write_reg(0x01, (q[0] & 0xFF) | ((q[0] >> 32 & 0xFF) << 8) |
+                                                   ((q[1] & 0xFF) << 16) | ((q[1] >> 32 & 0xFF) << 24));
+        else if (desc == 0x05) write_reg(0x05, (q[0] & 0xFFFF) | ((q[0] >> 32 & 0xFFFF) << 16) |
+                                                   ((q[1] & 0xFFFFFFFF) >> 4 << 32));    /* XYZ2 */
+        else if (desc == 0x0F) { /* NOP */ }
+        else write_reg(desc, q[0]);                            /* PRIM, ST, UV, FOG... (approximation) */
+        if (++gif.reg == gif.nreg) {
+            gif.reg = 0;
+            gif.loop++;
+        }
+        break;
+    }
+    case 1:                                                   /* REGLIST: two registers per quadword */
+        for (int h = 0; h < 2 && gif.loop < gif.nloop; h++) {
+            write_reg((uint32_t)((gif.regs >> (4 * gif.reg)) & 15), q[h]);
+            if (++gif.reg == gif.nreg) {
+                gif.reg = 0;
+                gif.loop++;
+            }
+        }
+        break;
+    default:                                                  /* IMAGE */
+        gs_image_data(q, 16);
+        gif.loop++;
+        break;
+    }
+    if (gif.loop >= gif.nloop) gif.in_packet = 0;
+}
+
+void gs_gif_write(const void *data, uint32_t qwords) {
+    const uint64_t *q = data;
+    for (uint32_t i = 0; i < qwords; i++, q += 2) gif_qword(q);
+}
+
+/* One whole packet (up to the tag with EOP) from memory; returns the bytes it took. */
 uint32_t gs_gif_packet(const void *packet) {
     const uint64_t *q = packet;
     uint32_t used = 0;
+    gif.in_packet = 0;
     for (;;) {
-        uint64_t tag = q[0], regs = q[1];
-        uint32_t nloop = (uint32_t)bits(tag, 0, 15), eop = (uint32_t)bits(tag, 15, 1);
-        uint32_t pre = (uint32_t)bits(tag, 46, 1), flg = (uint32_t)bits(tag, 58, 2);
-        uint32_t nreg = (uint32_t)bits(tag, 60, 4);
-        if (nreg == 0) nreg = 16;
+        gif_qword(q);
+        int last_tag = gif.eop;
         q += 2;
         used += 16;
-        if (pre && flg == 0) write_reg(0x00, bits(tag, 47, 11));
-        if (flg == 0) {                                   /* PACKED */
-            for (uint32_t i = 0; i < nloop; i++)
-                for (uint32_t r = 0; r < nreg; r++) {
-                    uint32_t desc = (uint32_t)((regs >> (4 * r)) & 15);
-                    if (desc == 0x0E) write_reg((uint32_t)(q[1] & 0xFF), q[0]);      /* A+D */
-                    else if (desc == 0x01) write_reg(0x01, (q[0] & 0xFFFFFFFFull));  /* RGBAQ, simplified */
-                    else log_warn("gs: GIF PACKED descriptor %u not supported yet", desc);
-                    q += 2;
-                    used += 16;
-                }
-        } else if (flg == 2) {                            /* IMAGE */
-            gs_image_data(q, nloop * 16);
-            q += 2 * nloop;
-            used += 16 * nloop;
-        } else {
-            log_warn("gs: GIF REGLIST mode not supported yet");
-            q += 2 * nloop;
-            used += 16 * nloop;
+        while (gif.in_packet) {
+            gif_qword(q);
+            q += 2;
+            used += 16;
         }
-        if (eop) break;
+        if (last_tag) break;
     }
     return used;
 }
 
+uint64_t gs_priv_reg(uint32_t offset);
+void gs_priv_reg_set(uint32_t offset, uint64_t v);
+
+/* What sceGsPutDispEnv writes: read circuit 2 (PMODE EN2). */
 void gs_set_display(uint64_t pmode, uint64_t dispfb, uint64_t display) {
-    g.pmode = pmode;
-    g.dispfb = dispfb;
-    g.display = display;
+    gs_priv_reg_set(0x00, pmode);
+    gs_priv_reg_set(0x90, dispfb);
+    gs_priv_reg_set(0xA0, display);
 }
 
 int gs_read_display(uint32_t *out, int *w, int *h, int max_w, int max_h) {
+    /* the game programs the privileged registers directly; show circuit 2 if enabled, else circuit 1 */
+    uint64_t pmode = gs_priv_reg(0x00);
+    int c2 = (pmode & 2) || !(pmode & 1);
+    g.pmode = pmode;
+    g.dispfb = gs_priv_reg(c2 ? 0x90 : 0x70);
+    g.display = gs_priv_reg(c2 ? 0xA0 : 0x80);
     if (!g.display) return 0;
     uint32_t fbp = (uint32_t)bits(g.dispfb, 0, 9) * 32, fbw = (uint32_t)bits(g.dispfb, 9, 6);
     uint32_t magh = (uint32_t)bits(g.display, 23, 4), dw = (uint32_t)bits(g.display, 32, 12);

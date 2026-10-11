@@ -117,6 +117,20 @@ def pc_provided(pc_src):
     return names
 
 
+def is_text(b):
+    return 0x20 <= b < 0x7F or b in (9, 10, 13) or b >= 0x80     # ASCII or Shift-JIS bytes
+
+
+def in_string(img, i):
+    """True when the word at img[i] is the tail of a text string, e.g. the "T;1\\0" of "...DRIVE.DAT;1":
+    the 4 bytes before it are text and the word is text up to its terminating 0."""
+    if i < 4 or not all(is_text(b) for b in img[i - 4:i]):
+        return False
+    word = img[i:i + 4]
+    end = word.find(0)
+    return end > 0 and all(is_text(b) for b in word[:end])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--decomp", type=Path, required=True)
@@ -188,7 +202,8 @@ def main():
                 if pos % 4 == 0 and pos + 4 <= e and not any(p in names_at for p in range(pos + 1, pos + 4)):
                     w, = struct.unpack_from("<I", img, pos - base)
                     target = None
-                    if not in_raw and pos not in force_num and (0x100000 <= w < 0x2000000 or pos in force_ptr):
+                    if not in_raw and pos not in force_num and (0x100000 <= w < 0x2000000 or pos in force_ptr) \
+                            and (pos in force_ptr or not in_string(img, pos - base)):
                         target = resolve(w, t)
                     if target:
                         tt, kind, name = target

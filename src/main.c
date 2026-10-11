@@ -10,6 +10,7 @@
 #include "log.h"
 #include "stubs.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,12 @@ int main(int argc, char **argv) {
     display_init(headless || test, dump);
     if (sizeof(void *) != 4) {
         log_error("this must be a 32-bit build");
+        return 1;
+    }
+    extern uintptr_t pc_game_memory_end(void);
+    extern char D_00231A70[];
+    if (pc_game_memory_end() > 0x10000000 || (uintptr_t)D_00231A70 > 0x10000000) {
+        log_error("the program was loaded above 0x10000000; it must be linked at a low fixed address");
         return 1;
     }
     if (iso_open(iso) != 0) return 1;

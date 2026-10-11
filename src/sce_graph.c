@@ -127,10 +127,29 @@ s32 sceGsSwapDBuff(sceGsDBuff *db, s32 id) {
     return 0;
 }
 
+/* The v-blank: sceGsSyncV waits for it (display_vsync paces to 59.94 Hz), then whatever the game hooked
+   on it runs, as the PS2's v-blank interrupt would have run it. */
+static s32 (*g_vsync_callback)(s32);
+
+void *sceGsSyncVCallback(s32 (*func)(s32)) {
+    void *old = (void *)g_vsync_callback;
+    g_vsync_callback = func;
+    return old;
+}
+
+void pc_raise_intc(s32 cause);
+
 s32 sceGsSyncV(s32 mode) {
+    static int in_vblank;
     (void)mode;
     display_vsync();
     g_field ^= 1;
+    if (!in_vblank) {                /* a handler that waits for the next v-blank mustn't recurse */
+        in_vblank = 1;
+        if (g_vsync_callback) g_vsync_callback(2);
+        pc_raise_intc(2);
+        in_vblank = 0;
+    }
     return g_field;
 }
 

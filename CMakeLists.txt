@@ -32,7 +32,7 @@ if(WIN32)
 endif()
 
 set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c
-    src/ps2ram.c)
+    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
 target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter)
@@ -93,9 +93,11 @@ add_custom_command(
 
 # decompiled game code: the same C files the decomp matches byte-for-byte on PS2
 add_library(game OBJECT ${GAME_SOURCES})
+set_target_properties(game PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 target_include_directories(game PRIVATE ${D}/include)
 string(TOUPPER "VERSION_${OUTBREAK_GAME}" VERSION_DEF)
-target_compile_definitions(game PRIVATE PLATFORM_PC ${VERSION_DEF})
+# NON_MATCHING: functions decompiled correctly but not yet byte-identical on PS2 are still built here
+target_compile_definitions(game PRIVATE PLATFORM_PC NON_MATCHING ${VERSION_DEF})
 target_compile_options(game PRIVATE -fno-builtin -fno-strict-aliasing -fwrapv -w)
 foreach(f ${GAME_SOURCES})
   file(RELATIVE_PATH rel ${D}/src/${GAME_ELF} ${f})
@@ -115,4 +117,8 @@ target_link_libraries(outbreak-${OUTBREAK_GAME} PRIVATE platform)
 target_compile_definitions(outbreak-${OUTBREAK_GAME} PRIVATE GAME_ELF="${GAME_ELF}")
 if(WIN32)
   target_link_options(outbreak-${OUTBREAK_GAME} PRIVATE -static)   # one .exe, no MinGW DLLs to ship
+  # at its usual low base, never relocated: the game keeps flags in the top bits of addresses
+  target_link_options(outbreak-${OUTBREAK_GAME} PRIVATE -Wl,--disable-dynamicbase -Wl,--image-base=0x400000)
+else()
+  target_link_options(outbreak-${OUTBREAK_GAME} PRIVATE -no-pie)
 endif()
