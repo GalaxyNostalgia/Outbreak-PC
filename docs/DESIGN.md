@@ -58,11 +58,18 @@ what to decompile next.
 | file I/O `sceOpen/Read/Lseek/Close` | `sce_io.c`: `cdrom0:`/`pfs0:` → disc image, `host:` → local folder | done |
 | disc image | `iso9660.c` (ISO 9660, files over 4 GB offsets) | done |
 | CD/DVD streaming, CRI file system | disc image reads | to do |
-| graphics (libgraph, DMA, VIF/VU1, GS) | native renderer, starting with a GS packet interpreter | to do |
+| graphics: libgraph double buffering, image uploads, display | `sce_graph.c` + `gs.c` (GS video memory with the real pixel layout, GIF packets, sprites) + `display.c` (SDL2 window, 59.94 Hz) | boot screen works |
+| graphics: textured/3D drawing, VIF/VU1 | GS model first, native renderers later | to do |
 | pad, memory card | SDL input; save files | to do |
 | sound (IOP driver, SPU2, CRI ADX) | software mixer + ADX decoder | to do |
 | movies (CRI Sofdec) | FFmpeg | to do |
 | network (DEV9/INET stack, DNAS, KDDI pages) | Winsock + legacy-TLS HTTPS to Obsrv | to do |
+
+## Fixed RAM addresses
+
+Some game code uses fixed main-RAM addresses as buffers (the boot code expands its image at `0x01000000`). The
+decomp writes these as `PS2_RAM(0x01000000)` (`decomp/include/ps2mem.h`); on PC that points into `pc_ram`, a
+32 MiB block (`src/ps2ram.c`).
 
 ## Floating point
 

@@ -11,23 +11,25 @@ English fan translation.
 
 ## Status
 
-**Early.** The program opens your disc image and runs the game's own decompiled `main()` natively, then stops
-at the first function that isn't decompiled yet:
+**Early.** The program opens your disc image, runs the game's own decompiled boot code natively and shows
+its first screen, the "NOW LOADING..." picture, in a window. Then it stops at the first function that
+isn't decompiled yet and keeps the picture up until you close the window:
 
 ```
 [info] starting the game: main(1, {"cdrom0:\SLPM_654.28;1"})
-[error] the game called func_001A85C0, which isn't decompiled yet
+[info] gs: reset (interlace 1, mode 2, frame)
+[error] the game called func_001B9070, which isn't decompiled yet
 ```
 
-Each function decompiled in Outbreak-decomp moves that line further. Next up: the system init
-(`func_001A85C0`), which brings in graphics, input and the I/O processor replacements.
+Each function decompiled in Outbreak-decomp moves that line further. Next up: the main loop's per-frame
+work (`func_001B9070`).
 
 ## Building on Windows
 
 1. Install [MSYS2](https://www.msys2.org/) and [Python 3](https://www.python.org/). In the **MSYS2 MINGW32**
    shell:
    ```sh
-   pacman -S git mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja
+   pacman -S git mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja mingw-w64-i686-SDL2
    git clone --recursive https://github.com/GalaxyNostalgia/Outbreak-PC.git
    cd Outbreak-PC
    ```
@@ -47,8 +49,11 @@ Each function decompiled in Outbreak-decomp moves that line further. Next up: th
    build/outbreak-f1.exe "/c/path/to/your/Biohazard Outbreak.iso"
    ```
 
-From Linux you can cross-compile the same `.exe`: `sudo apt install gcc-mingw-w64-i686`, then
-`cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake`. A 32-bit Linux build also works
+From Linux you can cross-compile the same `.exe`: `sudo apt install gcc-mingw-w64-i686`, unpack SDL2's
+`SDL2-devel-2.30.9-mingw.tar.gz`, then
+`cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DSDL2_DIR=<SDL2>/i686-w64-mingw32/lib/cmake/SDL2`.
+SDL2 is linked statically, so the result is a single `.exe`. Without SDL2 the build is headless:
+`--dump-frames DIR` writes each new picture to a file. A 32-bit Linux build also works
 (`-DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32`), but Windows is the main platform.
 
 ## How it works
@@ -62,7 +67,7 @@ packets keep the PS2's layout. The game's data is converted at build time into a
 | | |
 |---|---|
 | `decomp/` | Outbreak-decomp (submodule): the decompiled game C and the tools that split your disc |
-| `src/` | the PC platform layer: disc image reader, Sony file I/O, C library extras, more to come |
+| `src/` | the PC platform layer: disc image reader, Sony file I/O, graphics (`gs.c` GS model, `sce_graph.c` Sony graphics library, `display.c` window) |
 | `tools/gen_data.py` | converts your executable's data into linkable assembly; writes stubs for functions not decompiled yet |
 | `config/f1.json` | how `gen_data.py` treats File 1's data (VU microcode ranges, pointer overrides) |
 | `cmake/mingw-i686.cmake` | toolchain file for cross-compiling the Windows build |

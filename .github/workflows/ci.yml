@@ -8,10 +8,11 @@ jobs:
     defaults: { run: { shell: 'msys2 {0}' } }
     steps:
       - uses: actions/checkout@v4
+        with: { submodules: true }
       - uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW32
-          install: mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja
+          install: mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja mingw-w64-i686-SDL2
           suppress-deprecation-warnings: msystem-mingw32
       - name: Platform layer (32-bit Windows)
         run: |
@@ -21,6 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with: { submodules: true }
       - name: MinGW cross toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-i686 cmake
       - name: Platform layer (cross-compiled for Windows)

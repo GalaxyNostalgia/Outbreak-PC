@@ -5,6 +5,7 @@
  * executable, converted at build time (tools/gen_data.py). The program stops at the
  * first function that isn't decompiled yet and names it.
  */
+#include "display.h"
 #include "iso9660.h"
 #include "log.h"
 #include "stubs.h"
@@ -25,6 +26,7 @@ int func_001A87F0(int argc, char **argv);      /* the game's main() */
 void pc_unimplemented(const char *name) {
     log_error("the game called %s, which isn't decompiled yet", name);
     fflush(stderr);
+    display_hold(name);        /* keep the last picture on screen until the window is closed */
     exit(3);
 }
 
@@ -48,17 +50,21 @@ static int self_test(void) {
 }
 
 int main(int argc, char **argv) {
-    const char *iso = NULL;
-    int test = 0;
+    const char *iso = NULL, *dump = NULL;
+    int test = 0, headless = 0;
     setvbuf(stdout, NULL, _IONBF, 0);
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--test")) test = 1;
+        else if (!strcmp(argv[i], "--headless")) headless = 1;
+        else if (!strcmp(argv[i], "--dump-frames") && i + 1 < argc) dump = argv[++i];
         else if (argv[i][0] != '-') iso = argv[i];
     }
     if (!iso) {
-        fprintf(stderr, "usage: %s [--test] <your %s disc image.iso>\n", argv[0], GAME_ELF);
+        fprintf(stderr, "usage: %s [--test] [--headless] [--dump-frames DIR] <your %s disc image.iso>\n",
+                argv[0], GAME_ELF);
         return 2;
     }
+    display_init(headless || test, dump);
     if (sizeof(void *) != 4) {
         log_error("this must be a 32-bit build");
         return 1;
