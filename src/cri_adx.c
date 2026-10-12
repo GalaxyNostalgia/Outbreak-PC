@@ -172,6 +172,9 @@ s32 ADXF_ReadNw(ADXF adxf, s32 nsct, void *buf) {
         return -1;
     }
     h->stat = ADXF_STAT_READEND;
+    if (getenv("OUTBREAK_TRACE_FILES")) {
+        log_info("adx: read %u bytes at offset 0x%llx of the disc file", (unsigned)want, (unsigned long long)h->base);
+    }
     return (s32)((n + 2047) / 2048);
 }
 

@@ -186,9 +186,12 @@ def main():
     extra = defaultdict(lambda: defaultdict(set))
     code_alias = defaultdict(dict)        # owner target -> {name the C uses: owner's function symbol}
     owners_cfg = cfg.get("owners", {})
+    pc_replaced = set(cfg.get("pc_provided", []))   # overlay functions the PC code replaces
     for tname, rs in refs.items():
         here = next((x for x in targets if x.name == tname), main_t)
         for r in rs:
+            if r in pc_replaced:
+                continue
             if r.startswith("D_") or (r.startswith("func_") and len(r) < 13):
                 addr = int(r.split("_")[1], 16)
                 if not here.owns(addr):
@@ -235,6 +238,9 @@ def main():
                 if s <= addr < e:
                     for kind, name in t.labels.get(addr, [("dlabel", f"D_{addr:08X}")]):
                         names_at[addr].append(name)
+                    # C may name a jump table or other label as D_<addr>
+                    if f"D_{addr:08X}" in refs.get(t.name, set()) and f"D_{addr:08X}" not in names_at[addr]:
+                        names_at[addr].append(f"D_{addr:08X}")
             byte_run = []
 
             def flush():

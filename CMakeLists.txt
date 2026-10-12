@@ -32,7 +32,7 @@ if(WIN32)
 endif()
 
 set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c src/overlay.c src/tsnddrv.c
-    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c)
+    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
 target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter)
