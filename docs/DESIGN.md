@@ -41,8 +41,13 @@ The game loads code overlays (`PROG/*.BIN`) into shared address ranges. Here eve
 the program, with its own data. Overlays reuse addresses, so their symbols get a prefix: `game__D_00540100`,
 via a generated `names_<overlay>.h` that the overlay's C is compiled with.
 
-When the game "loads" an overlay, the PC version will reset that overlay's data to its initial state instead
-of reading code from disc.
+When the game "loads" an overlay it still reads the file (into `pc_ram`, unused), then calls the Metrowerks
+runtime's `MWo3_Init`; the PC version of that (`src/overlay.c`) puts that overlay's data back to how it was
+linked and clears its bss, using the table `tools/gen_data.py` writes (`build/gen/overlays.c`).
+
+Main's code refers to overlay functions by address (`D_540080` is DEMO.BIN's entry task). When several
+overlays cover an address, `config/<game>.json` `"owners"` says which one the code means, and the linker
+gets an alias (`build/gen/aliases.rsp`).
 
 ## Functions that aren't decompiled yet
 

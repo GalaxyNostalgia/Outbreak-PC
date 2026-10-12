@@ -114,6 +114,49 @@ int adx_partition_file(s32 ptid, s32 fid, IsoFile *disc_file, uint32_t *offset, 
     return 0;
 }
 
+/* ---- ADXF: reading whole files (the game's overlays) ---- */
+
+typedef struct {
+    IsoFile file;
+    s32 stat;
+} AdxfHandle;
+
+#define ADXF_STAT_READEND 3
+
+ADXF ADXF_Open(const char *fname, void *atr) {
+    AdxfHandle *h = calloc(1, sizeof(*h));
+    if (!h) return NULL;
+    if (iso_find(fname, &h->file) != 0) {
+        log_error("adx: %s isn't on the disc", fname);
+        free(h);
+        return NULL;             /* the game retries until it opens */
+    }
+    return h;
+}
+
+void ADXF_Close(ADXF adxf) { free(adxf); }
+
+s32 ADXF_GetFsizeSct(ADXF adxf) {
+    AdxfHandle *h = adxf;
+    return h ? (s32)((h->file.size + 2047) / 2048) : 0;
+}
+
+/* Reads at once; the game then waits for ADXF_STAT_READEND. */
+s32 ADXF_ReadNw(ADXF adxf, s32 nsct, void *buf) {
+    AdxfHandle *h = adxf;
+    int64_t n;
+    if (!h) return -1;
+    n = iso_read(&h->file, 0, buf, (uint32_t)nsct * 2048u);
+    if (n < 0) {
+        log_error("adx: read error");
+        return -1;
+    }
+    h->stat = ADXF_STAT_READEND;
+    return (s32)((n + 2047) / 2048);
+}
+
+s32 ADXF_GetStat(ADXF adxf) { return adxf ? ((AdxfHandle *)adxf)->stat : 0; }
+
 /* ---- ADXT: sound streams (playback to do) ---- */
 
 typedef struct {
@@ -142,6 +185,14 @@ void ADXT_SetReloadSct(ADXT adxt, s32 sct) { if (adxt) ((AdxtHandle *)adxt)->rel
 void ADXT_Pause(ADXT adxt, s32 on) { if (adxt) ((AdxtHandle *)adxt)->paused = on; }
 void func_00132908(ADXT adxt, s32 n) { if (adxt) ((AdxtHandle *)adxt)->unk6D = n; }
 void func_00133168(void) {}
+
+/* ---- the CRI v-blank wait the frame loop uses while the middleware runs ---- */
+
+s32 sceGsSyncV(s32 mode);
+
+/* On a PS2: lock the Sofdec server, wait for the v-blank with ADX's server running, unlock.
+   Here the ADX server has nothing to do yet, so it is the v-blank wait. */
+void func_0015F790(void) { sceGsSyncV(0); }
 
 /* ---- Sofdec (movies): to do ---- */
 

@@ -9,9 +9,23 @@
   "_raw": "VU microcode, then EE kernel-mode code copied to 0x8007xxxx at boot: bytes, never pointers",
   "overlays": [
     "submain",
-    "game"
+    "demo",
+    "game",
+    "netwk",
+    "netdnas",
+    "nethttp",
+    "single",
+    "netaq"
   ],
   "pointer": [],
   "number": [],
-  "_overlays": "submain stays resident next to the main executable; main's code uses its variables"
+  "_overlays": "all the overlays on the disc (EDITOR.BIN isn't): the game switches between them; submain stays resident and main's code uses its variables",
+  "owners": {
+    "D_540080": "demo",
+    "D_5CD580": "game",
+    "D_599570": "netwk",
+    "D_599730": "netwk",
+    "func_6AC010": "game"
+  },
+  "_owners": "addresses the C names that several overlays cover: which overlay the code means"
 }

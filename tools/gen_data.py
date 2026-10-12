@@ -13,6 +13,10 @@ configure.py) and the symbol names splat found (decomp/asm/<ELF>/), and writes:
                     overlays share PS2 address ranges (game__D_00540100 vs demo__D_00540100)
   stubs.c           a stub for every function the C or the data refers to that isn't decompiled
                     or implemented by the PC layer; calling one stops with its name
+  aliases.rsp       linker options: names the C uses for another overlay's functions (D_540080 in main's
+                    C is DEMO.BIN's func_00540080, config/<game>.json "owners")
+  overlays.c        the overlays linked in, with where each one's data and bss are, so the PC
+                    can reset them when the game "loads" that overlay
   gen_report.txt    what was converted, and which words looked like pointers but weren't used
 
 Pointer rules (config/<game>.json can override per address):
@@ -31,6 +35,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LABEL = re.compile(r"^\s*(glabel|dlabel|jlabel|alabel) (\w+)")
 RESERVED = {"_start", "main", "_init", "_fini", "exit", "abort"}
+# the game's own heap functions: the PC versions (src/ps2ram.c; sce.h maps the C names the same way)
+PC_NAMES = {"malloc": "pc_game_malloc", "free": "pc_game_free"}
+# C library functions the game's data points at: the PC's C runtime has them
+LIBC = {"memcpy", "memset", "memmove", "memcmp", "strcpy", "strncpy", "strcmp", "strncmp", "strlen", "strcat",
+        "strchr", "strrchr", "strstr", "sprintf", "printf", "vsprintf", "atoi", "rand", "srand", "qsort"}
 ADDR = re.compile(r"/\* (?:[0-9A-F]+ )?([0-9A-F]{8})(?: [0-9A-F]{8})? \*/")
 CDEF = re.compile(r"^[A-Za-z_][\w \t\*]*?\b(\w+)\s*\([^;{}]*\)\s*\{", re.M)
 
@@ -69,6 +78,8 @@ class Target:
         return lo <= addr < self.bss[1]
 
     def sym(self, name):
+        if not self.prefix and name in PC_NAMES:
+            return PC_NAMES[name]
         if name in RESERVED:                 # names the PC C runtime owns
             return f"ps2_{name}"
         return f"{self.prefix}{name}" if self.prefix else name
@@ -109,12 +120,12 @@ def c_symbols(src_dir):
         t = f.relative_to(src_dir).parts[0]
         text = f.read_text()
         defined[t] |= set(CDEF.findall(text))
-        refs[t] |= set(re.findall(r"\b(func_[0-9A-F]{8}|D_[0-9A-F]{6,8})\b", text))
+        refs[t] |= set(re.findall(r"\b(func_[0-9A-F]{6,8}|D_[0-9A-F]{6,8})\b", text))
     return defined, refs
 
 
 def pc_provided(pc_src):
-    names = set()
+    names = set(PC_NAMES) | LIBC
     for f in pc_src.rglob("*.c"):
         names |= set(CDEF.findall(f.read_text()))
     return names
@@ -173,22 +184,41 @@ def main():
     # C in one target that names data owned by another (main code touching the resident submain
     # overlay's variables): the owner also emits the exact name the C uses, unprefixed
     extra = defaultdict(lambda: defaultdict(set))
+    code_alias = defaultdict(dict)        # owner target -> {name the C uses: owner's function symbol}
+    owners_cfg = cfg.get("owners", {})
     for tname, rs in refs.items():
         here = next((x for x in targets if x.name == tname), main_t)
         for r in rs:
-            if r.startswith("D_"):
-                addr = int(r[2:], 16)
+            if r.startswith("D_") or (r.startswith("func_") and len(r) < 13):
+                addr = int(r.split("_")[1], 16)
                 if not here.owns(addr):
-                    owner = next((x for x in targets if x.owns(addr)), None)
-                    if owner is None:
+                    cands = [x for x in targets if x.owns(addr)]
+                    if r in owners_cfg:
+                        cands = [x for x in targets if x.name == owners_cfg[r]]
+                    if not cands:
                         sys.exit(f"{r} (used by {tname}) isn't inside any loaded target; "
                                  f"add its overlay to config/{a.game}.json or use PS2_RAM()")
-                    extra[owner.name][addr].add(r)
+                    if len(cands) > 1:
+                        sys.exit(f"{r} (used by {tname}) is inside {', '.join(c.name for c in cands)}: "
+                                 f'say which in config/{a.game}.json "owners"')
+                    owner = cands[0]
+                    if owner.text[0] <= addr < owner.text[1]:
+                        # another overlay's function: an alias to its (prefixed) symbol
+                        lab = next((n for k, n in owner.labels.get(addr, []) if k in ("glabel", "alabel")), None)
+                        if lab is None:
+                            sys.exit(f"{r} (used by {tname}) isn't the start of a function in {owner.name}")
+                        code_alias[owner.name][r] = owner.sym(lab)   # becomes a linker --defsym
+                        if lab not in c_defined_all and lab not in provided:
+                            stub_needed.add(owner.sym(lab))
+                    else:
+                        extra[owner.name][addr].add(r)
 
     for t in targets:
         img, base = t.image
         lines = [f"# generated by tools/gen_data.py from your {elf} ({t.name}); do not commit",
                  ".data", ".balign 64"]
+        if t.prefix:
+            lines += [f".globl {us}{t.prefix}ovl_data_begin", f"{us}{t.prefix}ovl_data_begin:"]
         # labels needed: every label in the data ranges, plus whatever C references
         want = {addr for addr in t.labels if any(s <= addr < e for s, e in t.data_ranges)}
         for r in refs.get(t.name, set()):
@@ -253,7 +283,11 @@ def main():
                 byte_run.append(img[pos - base])
                 pos += 1
             flush()
+        if t.prefix:
+            lines += [f".globl {us}{t.prefix}ovl_data_end", f"{us}{t.prefix}ovl_data_end:"]
         lines += [".bss", ".balign 64"]
+        if t.prefix:
+            lines += [f".globl {us}{t.prefix}ovl_bss_begin", f"{us}{t.prefix}ovl_bss_begin:"]
         pos = t.bss[0]
         for addr in bss_labels + [t.bss[1]]:
             if addr > pos:
@@ -264,6 +298,8 @@ def main():
                     lines += [f".globl {us}{t.sym(n)}", f"{us}{t.sym(n)}:"]
                 for n in sorted(extra[t.name].get(addr, ())):
                     lines += [f".globl {us}{n}", f"{us}{n}:"]
+        if t.prefix:
+            lines += [f".globl {us}{t.prefix}ovl_bss_end", f"{us}{t.prefix}ovl_bss_end:"]
         if not a.underscore:                 # ELF targets: data isn't executable
             lines.append('.section .note.GNU-stack,"",@progbits')
         (a.out / f"data_{t.name}.s").write_text("\n".join(lines) + "\n")
@@ -279,7 +315,7 @@ def main():
     for tname, rs in refs.items():
         t = next((x for x in targets if x.name == tname), main_t)
         for r in rs:
-            if r.startswith("func_") and r not in c_defined_all and r not in provided:
+            if r.startswith("func_") and len(r) == 13 and r not in c_defined_all and r not in provided:
                 addr = int(r[5:], 16)
                 owner = t if t.owns(addr) else main_t
                 stub_needed.add(owner.sym(r))
@@ -287,6 +323,24 @@ def main():
         "/* generated by tools/gen_data.py: functions that aren't decompiled yet */\n"
         '#include "stubs.h"\n\n' +
         "".join(f"void {s}(void) {{ pc_unimplemented(\"{s}\"); }}\n" for s in sorted(stub_needed)))
+    # names the C uses for another overlay's functions: the same address as that function
+    (a.out / "aliases.rsp").write_text("".join(
+        f"-Wl,--defsym,{us}{n}={us}{sym}\n" for t in targets for n, sym in sorted(code_alias[t.name].items())))
+    ovls = [t for t in targets if t.prefix]
+    tab = ["/* generated by tools/gen_data.py: the overlays linked into this build */",
+           '#include "overlay.h"', ""]
+    for t in ovls:
+        p = t.prefix
+        tab.append(f"extern char {p}ovl_data_begin[], {p}ovl_data_end[], {p}ovl_bss_begin[], {p}ovl_bss_end[];")
+    tab += ["", "PcOverlay pc_overlays[] = {"]
+    for t in ovls:
+        p = t.prefix
+        img, base = t.image
+        ovl_id, = struct.unpack_from("<I", img, 4)
+        tab.append(f'    {{"{t.name}", {ovl_id}, 0x{base:X}, {p}ovl_data_begin, {p}ovl_data_end, '
+                   f"{p}ovl_bss_begin, {p}ovl_bss_end, 0}},")
+    tab += ["    {0},", "};", ""]
+    (a.out / "overlays.c").write_text("\n".join(tab))
     (a.out / "gen_report.txt").write_text(
         "In-range numbers left as numbers (review: pointers splat didn't name?)\n" + "\n".join(report) + "\n")
     print(f"{len(stub_needed)} stubs; report in {a.out / 'gen_report.txt'}")

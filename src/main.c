@@ -8,6 +8,7 @@
 #include "display.h"
 #include "iso9660.h"
 #include "log.h"
+#include "overlay.h"
 #include "stubs.h"
 
 #include <stdint.h>
@@ -89,6 +90,7 @@ int main(int argc, char **argv) {
     }
     static char boot[] = "cdrom0:\\" GAME_ELF ";1";
     char *game_argv[] = {boot, NULL};
+    pc_overlays_init();
     log_info("starting the game: main(1, {\"%s\"})", boot);
     func_001A87F0(1, game_argv);
     return 0;

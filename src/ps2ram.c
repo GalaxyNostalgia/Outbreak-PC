@@ -16,6 +16,9 @@
 
 uint8_t pc_ram[32u * 1024 * 1024] __attribute__((aligned(64)));
 
+/* the scratchpad (PS2_SPR(addr) in the decomp): 16 KiB of fast RAM at 0x70000000 on a PS2 */
+uint8_t pc_spr[16u * 1024] __attribute__((aligned(64)));
+
 #define HEAP_SIZE (40u * 1024 * 1024)
 static uint8_t pc_heap[HEAP_SIZE] __attribute__((aligned(64)));
 
