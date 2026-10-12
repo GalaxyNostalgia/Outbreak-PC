@@ -7,7 +7,7 @@
 #
 # Needs the decomp (git submodule in decomp/) configured with your own disc first:
 #   cd decomp && python configure.py f1
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(outbreak_pc C ASM)
 
 set(OUTBREAK_GAME "f1" CACHE STRING "f1 (Biohazard Outbreak) or f2 (File 2)")
@@ -31,7 +31,7 @@ if(WIN32)
   add_compile_options(-mno-ms-bitfields)
 endif()
 
-set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c
+set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c
     src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
@@ -75,6 +75,16 @@ foreach(f ${GAME_SOURCES})
   string(REGEX MATCH "^[^/]+" t ${rel})
   list(APPEND TARGETS ${t})
 endforeach()
+# plus the overlays config/<game>.json always links (e.g. the resident submain overlay)
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/config/${OUTBREAK_GAME}.json GAME_CFG)
+string(JSON n_ovl ERROR_VARIABLE no_ovl LENGTH "${GAME_CFG}" overlays)
+if(NOT no_ovl AND n_ovl GREATER 0)
+  math(EXPR last "${n_ovl} - 1")
+  foreach(i RANGE ${last})
+    string(JSON o GET "${GAME_CFG}" overlays ${i})
+    list(APPEND TARGETS ${o})
+  endforeach()
+endif()
 list(REMOVE_DUPLICATES TARGETS)
 set(GEN_OUT ${GEN}/stubs.c)
 foreach(t ${TARGETS})

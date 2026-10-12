@@ -2,14 +2,88 @@
 #include "log.h"
 
 #include <ctype.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define SECTOR 2048u
 
 static FILE *g_iso;
 static IsoFile g_root;
+
+/* Folder mode: the disc's files copied to a folder (like PCSX2's host file system / QuickLoading).
+   IsoFile.lba is then an index into g_host. */
+#define MAX_HOST_FILES 512
+static char g_folder[1024];
+static struct { char path[1200]; FILE *f; } g_host[MAX_HOST_FILES];
+static int g_nhost;
+
+static int is_folder(const char *path) {
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+/* case-insensitive lookup of one name in a host directory */
+static int host_find_entry(const char *dir, const char *comp, size_t len, char *out, size_t outsz) {
+    DIR *d = opendir(dir);
+    struct dirent *e;
+    if (len >= 2 && comp[len - 2] == ';') len -= 2;
+    if (!d) return -1;
+    while ((e = readdir(d)) != NULL) {
+        if (strlen(e->d_name) != len) continue;
+        size_t i = 0;
+        while (i < len && toupper((unsigned char)e->d_name[i]) == toupper((unsigned char)comp[i])) i++;
+        if (i == len) {
+            snprintf(out, outsz, "%s/%s", dir, e->d_name);
+            closedir(d);
+            return 0;
+        }
+    }
+    closedir(d);
+    return -1;
+}
+
+static int host_find(const char *path, IsoFile *out) {
+    char cur[1200];
+    struct stat st;
+    snprintf(cur, sizeof cur, "%s", g_folder);
+    while (*path == '/' || *path == '\\') path++;
+    while (*path) {
+        const char *end = path;
+        char next[1200];
+        while (*end && *end != '/' && *end != '\\') end++;
+        if (host_find_entry(cur, path, (size_t)(end - path), next, sizeof next) != 0) return -1;
+        memcpy(cur, next, sizeof cur);
+        path = end;
+        while (*path == '/' || *path == '\\') path++;
+    }
+    if (stat(cur, &st) != 0 || S_ISDIR(st.st_mode)) return -1;
+    for (int i = 0; i < g_nhost; i++)
+        if (!strcmp(g_host[i].path, cur)) {
+            out->lba = (uint32_t)i;
+            out->size = (uint32_t)st.st_size;
+            return 0;
+        }
+    if (g_nhost == MAX_HOST_FILES) return -1;
+    snprintf(g_host[g_nhost].path, sizeof g_host[g_nhost].path, "%s", cur);
+    g_host[g_nhost].f = NULL;
+    out->lba = (uint32_t)g_nhost++;
+    out->size = (uint32_t)st.st_size;
+    return 0;
+}
+
+static int64_t host_read(const IsoFile *f, uint32_t offset, void *dst, uint32_t size) {
+    if (f->lba >= (uint32_t)g_nhost) return -1;
+    if (!g_host[f->lba].f && !(g_host[f->lba].f = fopen(g_host[f->lba].path, "rb"))) return -1;
+#ifdef _WIN32
+    if (_fseeki64(g_host[f->lba].f, offset, SEEK_SET) != 0) return -1;
+#else
+    if (fseeko(g_host[f->lba].f, (off_t)offset, SEEK_SET) != 0) return -1;
+#endif
+    return (int64_t)fread(dst, 1, size, g_host[f->lba].f);
+}
 
 static int seek(uint64_t off) {
 #ifdef _WIN32
@@ -28,6 +102,11 @@ static uint32_t le32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | 
 
 int iso_open(const char *path) {
     uint8_t pvd[SECTOR];
+    if (is_folder(path)) {
+        snprintf(g_folder, sizeof g_folder, "%s", path);
+        log_info("iso: using the disc's files in the folder %s", path);
+        return 0;
+    }
     g_iso = fopen(path, "rb");
     if (!g_iso) {
         log_error("iso: cannot open %s", path);
@@ -90,6 +169,7 @@ static int find_in_dir(const IsoFile *dir, const char *comp, size_t len, IsoFile
 int iso_find(const char *path, IsoFile *out) {
     IsoFile cur = g_root;
     int is_dir = 1;
+    if (g_folder[0]) return host_find(path, out);
     if (!g_iso) return -1;
     while (*path == '/' || *path == '\\') path++;
     while (*path) {
@@ -107,6 +187,7 @@ int iso_find(const char *path, IsoFile *out) {
 int64_t iso_read(const IsoFile *f, uint32_t offset, void *dst, uint32_t size) {
     if (offset >= f->size) return 0;
     if (size > f->size - offset) size = f->size - offset;
+    if (g_folder[0]) return host_read(f, offset, dst, size);
     if (read_at((uint64_t)f->lba * SECTOR + offset, dst, size) != 0) return -1;
     return size;
 }

@@ -11,18 +11,25 @@ English fan translation.
 
 ## Status
 
-**Early.** The program opens your disc image, runs the game's own decompiled boot code natively and shows
-its first screen, the "NOW LOADING..." picture, in a window. Then it stops at the first function that
-isn't decompiled yet and keeps the picture up until you close the window:
+**Early.** The program opens your disc, runs the game's own decompiled boot code natively and shows its
+first screen, the "NOW LOADING..." picture, in a window. The game's start-up runs too: it links to the sound
+driver, sets up its file system and opens the AFS archives on the disc (the rooms, sound effects and voices).
+Then it stops at the first function that isn't decompiled yet and keeps the picture up until you close the
+window:
 
 ```
 [info] starting the game: main(1, {"cdrom0:\SLPM_654.28;1"})
-[info] gs: reset (interlace 1, mode 2, frame)
-[error] the game called func_001B9070, which isn't decompiled yet
+[info] sdr: Connected to TamsoftSoundDriver: Version 2.0
+[info] adx: partition 10: \NETBIO00.DAT;1, 13 files
+...
+[error] the game called func_001B65D0, which isn't decompiled yet
 ```
 
-Each function decompiled in Outbreak-decomp moves that line further. Next up: the main loop's per-frame
-work (`func_001B9070`).
+Each function decompiled in Outbreak-decomp moves that line further. Sound and movie playback, online play
+and File 2 are still to do.
+
+The disc can be an ISO image or a folder with the disc's files copied into it (like PCSX2's host file
+system, or the QuickLoading set-up).
 
 ## Building on Windows
 

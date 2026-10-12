@@ -116,3 +116,8 @@ s32 iDisableIntc(s32 cause) { return DisableIntc(cause); }
 s32 iEnableDmac(s32 channel) { return EnableDmac(channel); }
 s32 iDisableDmac(s32 channel) { return DisableDmac(channel); }
 void iFlushCache(s32 op) {}
+
+/* Alarms and sleeping: the PC runs the game on one thread, so a thread that would sleep until
+   an alarm wakes it just carries on. */
+s32 SetAlarm(u16 time, void (*handler)(s32, u16, void *), void *arg) { return 1; }
+s32 SleepThread(void) { return 0; }

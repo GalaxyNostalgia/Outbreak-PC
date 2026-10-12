@@ -1,4 +1,5 @@
-/* Read-only access to the user's disc image (ISO 9660, 2048-byte sectors). */
+/* Read-only access to the user's disc: an ISO 9660 image (2048-byte sectors), or a folder with the
+   disc's files copied out of it. */
 #ifndef ISO9660_H
 #define ISO9660_H
 

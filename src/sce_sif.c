@@ -10,6 +10,7 @@
 #include "log.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void sceSifInitRpc(u32 mode) { (void)mode; }
 s32 sceSifRebootIop(const char *img) { log_info("iop: reboot with %s (nothing to do on PC)", img); return 1; }
@@ -51,4 +52,35 @@ s32 sceSifLoadStartModuleBuffer(void *addr, s32 args, const char *argp, s32 *res
 
 s32 sceDevctl(const char *name, s32 cmd, void *arg, u32 argLen, void *buf, u32 bufLen) {
     return -19;   /* -ENODEV */
+}
+
+/* SIF RPC: the EE side binds to an IOP server and calls it. The PC has no IOP; each driver the
+   game talks to is answered here. So far: the Tamsoft sound driver (channels 0 and 1), whose
+   answers are all zero (no sound yet). */
+typedef struct {
+    u32 pkt_addr;
+    u32 rpc_id;
+    s32 sema_id;
+    u32 mode;
+    u32 command;
+    void *buff;
+    void *cbuff;
+    void (*end_function)(void *);
+    void *end_param;
+    void *server;
+} sceSifClientData;
+
+static u32 g_rpc_server_dummy;
+
+s32 sceSifBindRpc(sceSifClientData *cd, u32 rpc_number, u32 mode) {
+    cd->rpc_id = rpc_number;
+    cd->server = &g_rpc_server_dummy;     /* "the IOP side is up" */
+    return 0;
+}
+
+s32 sceSifCallRpc(sceSifClientData *cd, u32 fno, u32 mode, void *send, s32 ssize, void *recv, s32 rsize,
+                  void (*end_func)(void *), void *end_param) {
+    if (recv && rsize > 0 && recv != send) memset(recv, 0, (size_t)rsize);
+    if (end_func) end_func(end_param);     /* finished at once */
+    return 0;
 }
