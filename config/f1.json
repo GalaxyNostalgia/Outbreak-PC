@@ -18,7 +18,10 @@
     "netaq"
   ],
   "pointer": [],
-  "number": [],
+  "number": [
+    "0x00218E90",
+    "0x00218E94"
+  ],
   "_overlays": "all the overlays on the disc (EDITOR.BIN isn't): the game switches between them; submain stays resident and main's code uses its variables",
   "owners": {
     "D_540080": "demo",
@@ -31,5 +34,6 @@
   "_owners": "addresses the C names that several overlays cover: which overlay the code means",
   "pc_provided": [
     "func_743F50"
-  ]
+  ],
+  "_number": "words that look like addresses but aren't: 0x218E80 is a table of offsets into demo_com.tex"
 }
