@@ -31,7 +31,7 @@ if(WIN32)
   add_compile_options(-mno-ms-bitfields)
 endif()
 
-set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c src/overlay.c
+set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c src/overlay.c src/tsnddrv.c
     src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
@@ -128,6 +128,9 @@ target_include_directories(outbreak-${OUTBREAK_GAME} PRIVATE ${CMAKE_CURRENT_SOU
 target_link_options(outbreak-${OUTBREAK_GAME} PRIVATE @${GEN}/aliases.rsp)
 set_property(TARGET outbreak-${OUTBREAK_GAME} APPEND PROPERTY LINK_DEPENDS ${GEN}/aliases.rsp)
 target_link_libraries(outbreak-${OUTBREAK_GAME} PRIVATE platform)
+if(UNIX)
+  target_link_libraries(outbreak-${OUTBREAK_GAME} PRIVATE m)   # atan2, sqrt
+endif()
 target_compile_definitions(outbreak-${OUTBREAK_GAME} PRIVATE GAME_ELF="${GAME_ELF}")
 if(WIN32)
   target_link_options(outbreak-${OUTBREAK_GAME} PRIVATE -static)   # one .exe, no MinGW DLLs to ship

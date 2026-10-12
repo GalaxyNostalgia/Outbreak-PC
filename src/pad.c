@@ -18,3 +18,13 @@ s32 scePad2CreateSocket(scePad2SocketParam *param, void *buffer) {
 s32 scePad2DeleteSocket(s32 socket) { return 1; }
 s32 scePad2GetState(s32 socket) { return 0; }    /* no controller */
 s32 scePad2Read(s32 socket, void *data) { return 0; }
+s32 scePad2GetButtonProfile(s32 socket, u8 *profile) { return -1; }
+
+/* libdbc: actuator (motor) info and data. No motors yet. */
+s32 func_00189308(s32 socket, u8 *info) { return -1; }
+s32 func_00189388(s32 socket, s32 n, u8 *mode, s32 len, u8 *data) { return 0; }
+
+/* Memory cards (libmc2): not there yet (save files come later). */
+s32 sceMc2Init(s32 mode) { return 0; }
+static int g_mc_sockets;
+s32 sceMc2CreateSocket(void *param, void *buffer) { return g_mc_sockets++; }

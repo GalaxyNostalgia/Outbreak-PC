@@ -14,7 +14,8 @@ English fan translation.
 **Early.** The program opens your disc, runs the game's own decompiled boot code natively and shows its
 first screen, the "NOW LOADING..." picture, in a window. The game's start-up runs too: it links to the sound
 driver, sets up its file system and opens the AFS archives on the disc (the rooms, sound effects and voices),
-loads its resident code overlay and runs its frame loop (screen clear, fades, sound commands).
+loads its resident code overlay and runs its frame loop (screen clear, fades, controllers, sound commands),
+loads the font and the common sound bank, and finishes the first step of its boot task.
 Then it stops at the first function that isn't decompiled yet and keeps the picture up until you close the
 window:
 
@@ -23,7 +24,7 @@ window:
 [info] sdr: Connected to TamsoftSoundDriver: Version 2.0
 [info] adx: partition 10: \NETBIO00.DAT;1, 13 files
 ...
-[error] the game called func_001AD740, which isn't decompiled yet
+[error] the game called func_001BAE10, which isn't decompiled yet
 ```
 
 Each function decompiled in Outbreak-decomp moves that line further. Sound and movie playback, online play

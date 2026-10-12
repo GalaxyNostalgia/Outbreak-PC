@@ -114,10 +114,14 @@ int adx_partition_file(s32 ptid, s32 fid, IsoFile *disc_file, uint32_t *offset, 
     return 0;
 }
 
+int adx_partition_file(s32 ptid, s32 fid, IsoFile *disc_file, uint32_t *offset, uint32_t *size);
+
 /* ---- ADXF: reading whole files (the game's overlays) ---- */
 
 typedef struct {
     IsoFile file;
+    uint32_t base;          /* where the file starts in the disc file (AFS archives hold many) */
+    uint32_t size;
     s32 stat;
 } AdxfHandle;
 
@@ -131,6 +135,19 @@ ADXF ADXF_Open(const char *fname, void *atr) {
         free(h);
         return NULL;             /* the game retries until it opens */
     }
+    h->size = h->file.size;
+    return h;
+}
+
+/* File `fid` of partition `ptid` */
+ADXF ADXF_OpenAfs(s32 ptid, s32 fid) {
+    AdxfHandle *h = calloc(1, sizeof(*h));
+    if (!h) return NULL;
+    if (adx_partition_file(ptid, fid, &h->file, &h->base, &h->size) != 0) {
+        log_error("adx: file %d of partition %d doesn't exist", fid, ptid);
+        free(h);
+        return NULL;
+    }
     return h;
 }
 
@@ -138,15 +155,18 @@ void ADXF_Close(ADXF adxf) { free(adxf); }
 
 s32 ADXF_GetFsizeSct(ADXF adxf) {
     AdxfHandle *h = adxf;
-    return h ? (s32)((h->file.size + 2047) / 2048) : 0;
+    return h ? (s32)((h->size + 2047) / 2048) : 0;
 }
 
 /* Reads at once; the game then waits for ADXF_STAT_READEND. */
 s32 ADXF_ReadNw(ADXF adxf, s32 nsct, void *buf) {
     AdxfHandle *h = adxf;
+    uint32_t want;
     int64_t n;
     if (!h) return -1;
-    n = iso_read(&h->file, 0, buf, (uint32_t)nsct * 2048u);
+    want = (uint32_t)nsct * 2048u;
+    if (want > h->size) want = h->size;
+    n = iso_read(&h->file, h->base, buf, want);
     if (n < 0) {
         log_error("adx: read error");
         return -1;
@@ -193,6 +213,11 @@ s32 sceGsSyncV(s32 mode);
 /* On a PS2: lock the Sofdec server, wait for the v-blank with ADX's server running, unlock.
    Here the ADX server has nothing to do yet, so it is the v-blank wait. */
 void func_0015F790(void) { sceGsSyncV(0); }
+/* CRI: hold/release the disc for the game's own reads (nothing to share on PC) */
+void func_0012BAB8(void) {}
+void func_0012BAD0(void) {}
+/* ADX server, run once a frame by the game (sound playback is still to do) */
+void func_0012BC38(void) {}
 
 /* ---- Sofdec (movies): to do ---- */
 

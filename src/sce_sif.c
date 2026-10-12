@@ -80,7 +80,10 @@ s32 sceSifBindRpc(sceSifClientData *cd, u32 rpc_number, u32 mode) {
 
 s32 sceSifCallRpc(sceSifClientData *cd, u32 fno, u32 mode, void *send, s32 ssize, void *recv, s32 rsize,
                   void (*end_func)(void *), void *end_param) {
-    if (recv && rsize > 0 && recv != send) memset(recv, 0, (size_t)rsize);
+    extern int pc_tsnd_rpc(u32 rpc_id, u32 fno, const void *send, s32 ssize, void *recv, s32 rsize);
+    if (!pc_tsnd_rpc(cd->rpc_id, fno, send, ssize, recv, rsize)) {
+        if (recv && rsize > 0 && recv != send) memset(recv, 0, (size_t)rsize);
+    }
     if (end_func) end_func(end_param);     /* finished at once */
     return 0;
 }

@@ -25,7 +25,8 @@
     "D_5CD580": "game",
     "D_599570": "netwk",
     "D_599730": "netwk",
-    "func_6AC010": "game"
+    "func_6AC010": "game",
+    "func_822180": "netaq"
   },
   "_owners": "addresses the C names that several overlays cover: which overlay the code means"
 }
