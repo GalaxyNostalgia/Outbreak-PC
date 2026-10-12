@@ -24,6 +24,7 @@
 int func_001A8300(const char *name);           /* disc file size */
 void func_001BC780(char *dst, const char *name); /* "cdrom0:\NAME;1" */
 int func_001A87F0(int argc, char **argv);      /* the game's main() */
+void pc_mc2_set_dir(const char *dir);             /* mc2.c: where memory card saves go */
 
 void pc_unimplemented(const char *name) {
     log_error("the game called %s, which isn't decompiled yet", name);
@@ -59,10 +60,11 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[i], "--test")) test = 1;
         else if (!strcmp(argv[i], "--headless")) headless = 1;
         else if (!strcmp(argv[i], "--dump-frames") && i + 1 < argc) dump = argv[++i];
+        else if (!strcmp(argv[i], "--saves") && i + 1 < argc) pc_mc2_set_dir(argv[++i]);
         else if (argv[i][0] != '-') iso = argv[i];
     }
     if (!iso) {
-        fprintf(stderr, "usage: %s [--test] [--headless] [--dump-frames DIR] <your %s disc image.iso>\n",
+        fprintf(stderr, "usage: %s [--test] [--headless] [--dump-frames DIR] [--saves DIR] <your %s disc image.iso>\n",
                 argv[0], GAME_ELF);
         return 2;
     }

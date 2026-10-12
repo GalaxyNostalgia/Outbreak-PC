@@ -2,3 +2,4 @@
 *.iso
 *.exe
 __pycache__/
+saves/
