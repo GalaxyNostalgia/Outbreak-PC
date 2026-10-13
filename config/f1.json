@@ -30,8 +30,20 @@
     "D_599570": "netwk",
     "D_599730": "netwk",
     "func_6AC010": "game",
-    "func_822180": "netaq"
+    "func_822180": "netaq",
+    "func_00825DF0": "single",
+    "func_008201D0": "single",
+    "func_00821B50": "netaq",
+    "func_00820200": "single",
+    "func_00821D60": "netaq",
+    "func_0064E9F0": "game",
+    "func_0064EE00": "game",
+    "func_006AE930": "game",
+    "func_00820820": "single",
+    "func_00822760": "netaq"
   },
+  "prefer": ["game", "single"],
+  "_prefer": "when C names an address several overlays cover and \"owners\" doesn't say, the first of these that covers it",
   "_owners": "addresses the C names that several overlays cover: which overlay the code means",
   "pc_provided": [
     "func_743F50"

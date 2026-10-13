@@ -203,6 +203,10 @@ def main():
                     cands = [x for x in targets if x.owns(addr)]
                     if r in owners_cfg:
                         cands = [x for x in targets if x.name == owners_cfg[r]]
+                    elif len(cands) > 1:
+                        # several overlays share the address: the in-game ones win (config "prefer")
+                        pref = [x for p in cfg.get("prefer", []) for x in cands if x.name == p]
+                        cands = pref[:1] or cands
                     if not cands:
                         sys.exit(f"{r} (used by {tname}) isn't inside any loaded target; "
                                  f"add its overlay to config/{a.game}.json or use PS2_RAM()")
