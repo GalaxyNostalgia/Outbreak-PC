@@ -128,3 +128,69 @@ void func_0018FCA0(f32 rx, f32 ry, f32 rz, f32 *m) {
 
 /* VU0 square root */
 f32 func_00191BF0(f32 x) { return sqrtf(x); }
+
+/* The identity scaled by (x, y, z). */
+void func_0018F830(f32 x, f32 y, f32 z, f32 *m) {
+    memcpy(m, D_00277260, 64);
+    m[0] = x;
+    m[5] = y;
+    m[10] = z;
+}
+
+/* Rotates rows 0-2 about x by a: y' = c*y - s*z, z' = s*y + c*z. */
+void func_0018FAD0(f32 a, f32 *m) {
+    f32 s = sinf(a), c = cosf(a);
+    for (int r = 0; r < 3; r++) {
+        f32 *v = m + r * 4, y = v[1], z = v[2];
+        v[1] = c * y - s * z;
+        v[2] = s * y + c * z;
+    }
+}
+
+/* The inverse of a rotation-and-scale matrix with a translation: row i of the 3x3 part is
+   column i of m divided by the squared length of that row of m; the translation is -t through it. */
+void func_00190E00(f32 *out, const f32 *m) {
+    f32 r[16], q[3];
+    for (int j = 0; j < 3; j++) {
+        const f32 *row = m + j * 4;
+        q[j] = 1.0f / (row[0] * row[0] + row[1] * row[1] + row[2] * row[2]);
+    }
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) r[i * 4 + j] = m[j * 4 + i] * q[j];
+        r[i * 4 + 3] = 0.0f;
+    }
+    for (int j = 0; j < 3; j++)
+        r[12 + j] = -(m[j * 4 + 0] * m[12] + m[j * 4 + 1] * m[13] + m[j * 4 + 2] * m[14]) * q[j];
+    r[15] = 1.0f;
+    memcpy(out, r, 64);
+}
+
+/* Rows: 0 = a, 2 = a x b, 1 = row 2 x a (unit length); the w column (0, 0, 0, 1), row 3's xyz kept. */
+void func_00190F50(f32 *m, const f32 *a, const f32 *b) {
+    f32 x[3] = {a[0], a[1], a[2]}, u[3] = {b[0], b[1], b[2]}, z[3], y[3];
+    norm3(x);
+    norm3(u);
+    cross3(z, x, u);
+    norm3(z);
+    cross3(y, z, x);
+    memcpy(m, x, 12);
+    memcpy(m + 4, y, 12);
+    memcpy(m + 8, z, 12);
+    m[3] = m[7] = m[11] = 0.0f;
+    m[15] = 1.0f;
+}
+
+/* Rows: 0 = a, 1 = b x a, 2 = a x row 1 (unit length); w column as above. */
+void func_00191030(f32 *m, const f32 *a, const f32 *b) {
+    f32 x[3] = {a[0], a[1], a[2]}, u[3] = {b[0], b[1], b[2]}, y[3], z[3];
+    norm3(x);
+    norm3(u);
+    cross3(y, u, x);
+    norm3(y);
+    cross3(z, x, y);
+    memcpy(m, x, 12);
+    memcpy(m + 4, y, 12);
+    memcpy(m + 8, z, 12);
+    m[3] = m[7] = m[11] = 0.0f;
+    m[15] = 1.0f;
+}
