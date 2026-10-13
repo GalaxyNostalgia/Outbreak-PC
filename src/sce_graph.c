@@ -139,11 +139,13 @@ void *sceGsSyncVCallback(s32 (*func)(s32)) {
 }
 
 void pc_raise_intc(s32 cause);
+uint32_t pc_vblank_count;         /* v-blanks so far (movie timing) */
 
 s32 sceGsSyncV(s32 mode) {
     static int in_vblank;
     (void)mode;
     display_vsync();
+    pc_vblank_count++;
     g_field ^= 1;
     {   /* CSR: VSINT (bit 3) and FIELD (bit 13) */
         extern void gs_priv_reg_set(uint32_t offset, uint64_t v);

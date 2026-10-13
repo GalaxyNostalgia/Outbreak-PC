@@ -206,6 +206,10 @@ void ADXT_SetOutVol(ADXT adxt, s32 vol) { if (adxt) ((AdxtHandle *)adxt)->vol = 
 void ADXT_SetSvrFreq(ADXT adxt, s32 freq) { if (adxt) ((AdxtHandle *)adxt)->svrfreq = freq; }
 void ADXT_SetReloadSct(ADXT adxt, s32 sct) { if (adxt) ((AdxtHandle *)adxt)->reloadSct = sct; }
 void ADXT_Pause(ADXT adxt, s32 on) { if (adxt) ((AdxtHandle *)adxt)->paused = on; }
+/* Until ADX playback is written, a started stream has finished at once (ADXT_STAT_PLAYEND). */
+void ADXT_StartAfs(ADXT adxt, s32 ptid, s32 fid) { if (adxt) ((AdxtHandle *)adxt)->stat = 5; }
+void ADXT_SetWaitPlayStart(ADXT adxt, s32 flag) {}
+s32 ADXT_IsReadyPlayStart(ADXT adxt) { return 1; }
 void func_00132908(ADXT adxt, s32 n) { if (adxt) ((AdxtHandle *)adxt)->unk6D = n; }
 void func_00133168(void) {}
 
@@ -222,6 +226,4 @@ void func_0012BAD0(void) {}
 /* ADX server, run once a frame by the game (sound playback is still to do) */
 void func_0012BC38(void) {}
 
-/* ---- Sofdec (movies): to do ---- */
-
-void mwPlyInitSfdFx(void *prm) { log_info("sofdec: movie player not implemented yet"); }
+/* Sofdec (movies): sofdec.c */

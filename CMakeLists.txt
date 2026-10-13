@@ -9,6 +9,9 @@
 #   cd decomp && python configure.py f1
 cmake_minimum_required(VERSION 3.19)
 project(outbreak_pc C ASM)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "build type" FORCE)   # the software GS needs the optimizer
+endif()
 
 set(OUTBREAK_GAME "f1" CACHE STRING "f1 (Biohazard Outbreak) or f2 (File 2)")
 set(OUTBREAK_DECOMP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/decomp" CACHE PATH "the Outbreak-decomp checkout")
@@ -32,7 +35,7 @@ if(WIN32)
 endif()
 
 set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c src/overlay.c src/tsnddrv.c
-    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c)
+    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c src/sofdec.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
 target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter)

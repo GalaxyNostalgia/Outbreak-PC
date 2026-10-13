@@ -1,6 +1,7 @@
 /* Functions the game has as hand-written assembly (copy and clear loops), in C for the PC port. */
 #include "common.h"
 
+#include <math.h>
 #include <string.h>
 
 void func_00189598(const void *src, void *dst, s32 words) { memcpy(dst, src, (size_t)words * 4); }
@@ -37,3 +38,15 @@ void func_00191750(f32 *v) {
     v[1] *= q;
     v[2] *= q;
 }
+
+/* VU0 trigonometry (vu0math): sin, cos, and both at once into a vector */
+f32 func_0018EDB0(f32 x) { return sinf(x); }
+f32 func_0018EED0(f32 x) { return cosf(x); }
+void func_0018EFC0(f32 *out, f32 x) {
+    out[0] = sinf(x);
+    out[1] = cosf(x);
+    out[2] = 0.0f;
+    out[3] = 0.0f;
+}
+/* VU0 square root */
+f32 func_00191BF0(f32 x) { return sqrtf(x); }

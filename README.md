@@ -11,24 +11,23 @@ English fan translation.
 
 ## Status
 
-**Early.** The program opens your disc, runs the game's own decompiled boot code natively and shows its
-first screen, the "NOW LOADING..." picture, in a window. The game's start-up runs too: it links to the sound
-driver, sets up its file system and opens the AFS archives on the disc (the rooms, sound effects and voices),
-loads its resident code overlay and runs its frame loop (screen clear, fades, controllers, sound commands),
-loads the font and the common sound bank, and finishes the first step of its boot task.
-Then it stops at the first function that isn't decompiled yet and keeps the picture up until you close the
-window:
+**Early.** The program opens your disc and runs the game's own decompiled code natively, drawing through a
+software model of the PS2's Graphics Synthesizer (textures, CLUTs, blending, the GS memory layouts) in a
+window. The boot runs through: memory card check (slot 1 is a folder of save files, `--saves DIR`), the
+logos, the online-play setup check, then DEMO.BIN: the title screen, the opening movie and the attract
+movies, which play through the game's own Sofdec upload code (MPEG-2 video decoded with a patched
+pl_mpeg). When it reaches code that isn't decompiled yet it stops and says which function:
 
 ```
 [info] starting the game: main(1, {"cdrom0:\SLPM_654.28;1"})
 [info] sdr: Connected to TamsoftSoundDriver: Version 2.0
 [info] adx: partition 10: \NETBIO00.DAT;1, 13 files
 ...
-[error] the game called func_001BAE10, which isn't decompiled yet
+[info] sofdec: playing file 1 of partition 3 (512x448, 29.97 fps)
 ```
 
-Each function decompiled in Outbreak-decomp moves that line further. Sound and movie playback, online play
-and File 2 are still to do.
+Each function decompiled in Outbreak-decomp gets the game further. Sound (ADX, the Tamsoft driver), the 3D
+scenes, the menus behind the title, online play and File 2 are still to do.
 
 The disc can be an ISO image or a folder with the disc's files copied into it (like PCSX2's host file
 system, or the QuickLoading set-up).
@@ -78,6 +77,7 @@ packets keep the PS2's layout. The game's data is converted at build time into a
 | `decomp/` | Outbreak-decomp (submodule): the decompiled game C and the tools that split your disc |
 | `src/` | the PC platform layer: disc image reader, Sony file I/O, graphics (`gs.c` GS model, `sce_graph.c` Sony graphics library, `display.c` window) |
 | `tools/gen_data.py` | converts your executable's data into linkable assembly; writes stubs for functions not decompiled yet |
+| `third_party/pl_mpeg` | MPEG video decoder (MIT), extended for the MPEG-2 video in the game's Sofdec movies |
 | `config/f1.json` | how `gen_data.py` treats File 1's data (VU microcode ranges, pointer overrides) |
 | `cmake/mingw-i686.cmake` | toolchain file for cross-compiling the Windows build |
 

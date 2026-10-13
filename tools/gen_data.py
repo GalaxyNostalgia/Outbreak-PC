@@ -192,7 +192,7 @@ def main():
         for r in rs:
             if r in pc_replaced:
                 continue
-            if r.startswith("D_") or (r.startswith("func_") and len(r) < 13):
+            if r.startswith("D_") or r.startswith("func_"):
                 addr = int(r.split("_")[1], 16)
                 if not here.owns(addr):
                     cands = [x for x in targets if x.owns(addr)]
@@ -210,7 +210,8 @@ def main():
                         lab = next((n for k, n in owner.labels.get(addr, []) if k in ("glabel", "alabel")), None)
                         if lab is None:
                             sys.exit(f"{r} (used by {tname}) isn't the start of a function in {owner.name}")
-                        code_alias[owner.name][r] = owner.sym(lab)   # becomes a linker --defsym
+                        if owner.sym(lab) != r:
+                            code_alias[owner.name][r] = owner.sym(lab)   # becomes a linker --defsym
                         if lab not in c_defined_all and lab not in provided:
                             stub_needed.add(owner.sym(lab))
                     else:
