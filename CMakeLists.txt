@@ -38,7 +38,7 @@ set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/g
     src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c src/sofdec.c)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
-target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing)
 target_compile_definitions(platform PRIVATE _FILE_OFFSET_BITS=64 PLATFORM_PC)
 
 # SDL2 for the window (optional: without it the program runs headless and can dump frames)

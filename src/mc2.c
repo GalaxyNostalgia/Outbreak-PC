@@ -258,7 +258,7 @@ s32 sceMc2RenameAsync(s32 socket, const char *from, const char *to) {
     return finish(9, rename(a, b) == 0 ? 0 : ERR(E_NOENT));
 }
 
-/* "dir/*" style listing; the count of entries goes to *count and the result. */
+/* "dir/<star>" style listing; the count of entries goes to *count and the result. */
 s32 sceMc2GetDirAsync(s32 socket, const char *name, s32 offset, s32 max, McDirEntry *ents, s32 *count) {
     if (!card_present(socket)) return finish(0xA, ERR(E_NODEV));
     char p[1024], pat[256] = "";
