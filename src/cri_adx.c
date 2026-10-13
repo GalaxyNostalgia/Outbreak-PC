@@ -148,6 +148,8 @@ ADXF ADXF_OpenAfs(s32 ptid, s32 fid) {
         free(h);
         return NULL;
     }
+    if (getenv("OUTBREAK_TRACE_FILES"))
+        log_info("adxf: open file %d of partition %d: offset %u size %u", fid, ptid, h->base, h->size);
     return h;
 }
 

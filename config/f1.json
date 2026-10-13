@@ -17,7 +17,9 @@
     "single",
     "netaq"
   ],
-  "pointer": [],
+  "pointer": [
+    ["0x006FD570", "0x006FD620"]
+  ],
   "number": [
     "0x00218E90",
     "0x00218E94",
@@ -40,7 +42,9 @@
     "func_0064EE00": "game",
     "func_006AE930": "game",
     "func_00820820": "single",
-    "func_00822760": "netaq"
+    "func_00822760": "netaq",
+    "func_00820F20": "netaq",
+    "func_00821570": "netaq"
   },
   "prefer": ["game", "single"],
   "_prefer": "when C names an address several overlays cover and \"owners\" doesn't say, the first of these that covers it",
@@ -48,5 +52,6 @@
   "pc_provided": [
     "func_743F50"
   ],
+  "_pointer": "words (or [start, end) tables) that are pointers, possibly into the middle of an object: 0x6FD570 (game) is the enemy room lists by scenario",
   "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex"
 }

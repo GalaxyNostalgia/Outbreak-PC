@@ -263,6 +263,9 @@ void mwPlyRelCurFrm(MwPly *ply, MwsfdFrmObj *frm) {}
 
 void mwPlyGetPlyInf(MwPly *ply, MwsfdPlyInf *inf) { memset(inf, 0, sizeof *inf); }
 
+/* No more entries will be queued: play to the end of the last one. */
+void mwPlyReleaseSeamless(MwPly *ply) { ((Player *)ply)->loop = 0; }
+
 void mwPlyStartAfsLp(MwPly *ply, s32 ptid, s32 fid) {
     Player *p = (Player *)ply;
     p->nentry = 0;

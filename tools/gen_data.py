@@ -26,6 +26,7 @@ Pointer rules (config/<game>.json can override per address):
 """
 import argparse
 import json
+import bisect
 import re
 import struct
 import sys
@@ -156,7 +157,15 @@ def main():
     ver = json.loads((decomp / "config/versions.json").read_text())[a.game]
     cfg = json.loads((ROOT / "config" / f"{a.game}.json").read_text())
     raw = [(int(s, 16), int(e, 16)) for s, e in cfg.get("raw", [])]
-    force_ptr = {int(k, 16) for k in cfg.get("pointer", [])}
+    force_ptr = set()
+    interior = set()                          # positions whose pointer may point inside an object
+    for k in cfg.get("pointer", []):          # one word, or [first, end) of a table of pointers
+        if isinstance(k, list):
+            rng = range(int(k[0], 16), int(k[1], 16), 4)
+            force_ptr.update(rng)
+            interior.update(rng)
+        else:
+            force_ptr.add(int(k, 16))
     force_num = set()
     for k in cfg.get("number", []):           # one word, or [first, end) of a table
         if isinstance(k, list):
@@ -176,14 +185,24 @@ def main():
     stub_needed = set()
     c_defined_all = {n for s in defined.values() for n in s}
 
-    def resolve(addr, here):
-        """Symbol for an address seen from target `here`: (name, offset) or None."""
+    sorted_labels = {t.name: sorted(a for a, ls in t.labels.items() if any(k == "dlabel" for k, _ in ls))
+                     for t in targets}
+
+    def resolve(addr, here, inside=False):
+        """Symbol for an address seen from target `here`: (target, kind, name), name maybe "sym+off".
+        inside: the address may point into a data object (the nearest data label before it)."""
         for t in ([here] + [x for x in targets if x is not here]) if here is not main_t else targets:
             if here is not main_t and t is not here and t is not main_t:
                 continue                      # an overlay only sees itself and the main executable
             if t.owns(addr) and addr in t.labels:
                 kind, name = t.labels[addr][0]
                 return t, kind, name
+            if inside and t.owns(addr) and not (t.text[0] <= addr < t.text[1]):
+                ls = sorted_labels[t.name]
+                i = bisect.bisect_right(ls, addr) - 1
+                if i >= 0:
+                    name = next(n for k, n in t.labels[ls[i]] if k == "dlabel")
+                    return t, "dlabel+", f"{name}+{addr - ls[i]}"
         return None
 
     # C in one target that names data owned by another (main code touching the resident submain
@@ -272,7 +291,7 @@ def main():
                     target = None
                     if not in_raw and pos not in force_num and (0x100000 <= w < 0x2000000 or pos in force_ptr) \
                             and (pos in force_ptr or pos in names_at or not in_string(img, pos - base)):
-                        target = resolve(w, t)
+                        target = resolve(w, t, pos in interior)
                     if target:
                         tt, kind, name = target
                         if kind in ("glabel", "alabel"):
@@ -282,6 +301,11 @@ def main():
                             flush()
                             lines.append(f"    .long {us}{sym}")
                             stats["function pointers"] += 1
+                        elif kind == "dlabel+":
+                            base_name, off = name.split("+")
+                            flush()
+                            lines.append(f"    .long {us}{tt.sym(base_name)}+{off}")
+                            stats["data pointers"] += 1
                         elif kind == "jlabel":
                             flush()
                             lines.append(f"    .long 0  # jump-table entry {name}: only used by asm code")
