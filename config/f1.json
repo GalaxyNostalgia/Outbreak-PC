@@ -20,7 +20,8 @@
   "pointer": [],
   "number": [
     "0x00218E90",
-    "0x00218E94"
+    "0x00218E94",
+    ["0x00559540", "0x005595AC"]
   ],
   "_overlays": "all the overlays on the disc (EDITOR.BIN isn't): the game switches between them; submain stays resident and main's code uses its variables",
   "owners": {
@@ -35,5 +36,5 @@
   "pc_provided": [
     "func_743F50"
   ],
-  "_number": "words that look like addresses but aren't: 0x218E80 is a table of offsets into demo_com.tex"
+  "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex"
 }

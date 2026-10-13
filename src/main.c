@@ -52,6 +52,8 @@ static int self_test(void) {
     return fails;
 }
 
+void pc_pad_script(const char *spec);
+
 int main(int argc, char **argv) {
     const char *iso = NULL, *dump = NULL;
     int test = 0, headless = 0;
@@ -61,10 +63,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--headless")) headless = 1;
         else if (!strcmp(argv[i], "--dump-frames") && i + 1 < argc) dump = argv[++i];
         else if (!strcmp(argv[i], "--saves") && i + 1 < argc) pc_mc2_set_dir(argv[++i]);
+        else if (!strcmp(argv[i], "--input") && i + 1 < argc) pc_pad_script(argv[++i]);
         else if (argv[i][0] != '-') iso = argv[i];
     }
     if (!iso) {
-        fprintf(stderr, "usage: %s [--test] [--headless] [--dump-frames DIR] [--saves DIR] <your %s disc image.iso>\n",
+        fprintf(stderr, "usage: %s [--test] [--headless] [--dump-frames DIR] [--saves DIR] [--input BUTTON@VBLANK+FRAMES,...] <your %s disc image.iso>\n",
                 argv[0], GAME_ELF);
         return 2;
     }

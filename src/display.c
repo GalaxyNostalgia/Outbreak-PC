@@ -89,13 +89,17 @@ static void present(int w, int h) {
     SDL_RenderPresent(g_ren);
 }
 
+void pc_pad_sdl_event(const void *ev);
+
 static void pump(void) {
     SDL_Event e;
-    while (SDL_PollEvent(&e))
+    while (SDL_PollEvent(&e)) {
+        pc_pad_sdl_event(&e);
         if (e.type == SDL_QUIT) {
             log_info("display: window closed");
             exit(0);
         }
+    }
 }
 #endif
 

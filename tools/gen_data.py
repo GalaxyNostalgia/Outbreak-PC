@@ -157,7 +157,12 @@ def main():
     cfg = json.loads((ROOT / "config" / f"{a.game}.json").read_text())
     raw = [(int(s, 16), int(e, 16)) for s, e in cfg.get("raw", [])]
     force_ptr = {int(k, 16) for k in cfg.get("pointer", [])}
-    force_num = {int(k, 16) for k in cfg.get("number", [])}
+    force_num = set()
+    for k in cfg.get("number", []):           # one word, or [first, end) of a table
+        if isinstance(k, list):
+            force_num.update(range(int(k[0], 16), int(k[1], 16), 4))
+        else:
+            force_num.add(int(k, 16))
     elf = ver["elf"]
     src = decomp / "src" / elf
     defined, refs = c_symbols(src) if src.exists() else ({}, {})

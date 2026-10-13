@@ -94,7 +94,7 @@ static int open_entry(Player *p, int i) {
     plm_set_audio_enabled(p->plm, 0);          /* ADX, not MPEG audio: still to do */
     plm_set_loop(p->plm, 0);
     if (!plm_probe(p->plm, 512 * 1024) || plm_get_width(p->plm) <= 0) {
-        log_error("sofdec: file %d of partition %d isn't a movie we can play", p->entry[i].fid, p->entry[i].ptid);
+        log_error("sofdec: file %d of partition %d isn't a movie we can play (v-blank %u)", p->entry[i].fid, p->entry[i].ptid, pc_vblank_count);
         close_file(p);
         return -1;
     }
@@ -262,3 +262,11 @@ void mwPlyGetCurFrm(MwPly *ply, MwsfdFrmObj *frm) {
 void mwPlyRelCurFrm(MwPly *ply, MwsfdFrmObj *frm) {}
 
 void mwPlyGetPlyInf(MwPly *ply, MwsfdPlyInf *inf) { memset(inf, 0, sizeof *inf); }
+
+void mwPlyStartAfsLp(MwPly *ply, s32 ptid, s32 fid) {
+    Player *p = (Player *)ply;
+    p->nentry = 0;
+    mwPlyEntryAfs(ply, ptid, fid);
+    p->loop = 1;
+    start(p);
+}
