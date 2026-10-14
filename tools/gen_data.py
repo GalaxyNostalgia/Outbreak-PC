@@ -172,6 +172,8 @@ def main():
             force_num.update(range(int(k[0], 16), int(k[1], 16), 4))
         else:
             force_num.add(int(k, 16))
+    # the overlays' small data lives in the main executable's .sdata: [start, end) per overlay
+    sdata = [(int(r[0], 16), int(r[1], 16), name) for name, r in cfg.get("sdata", {}).items()]
     elf = ver["elf"]
     src = decomp / "src" / elf
     defined, refs = c_symbols(src) if src.exists() else ({}, {})
@@ -294,7 +296,14 @@ def main():
                     target = None
                     if not in_raw and pos not in force_num and (0x100000 <= w < 0x2000000 or pos in force_ptr) \
                             and (pos in force_ptr or pos in names_at or not in_string(img, pos - base)):
-                        target = resolve(w, t, pos in interior)
+                        sd = next((n for a0, a1, n in sdata if a0 <= pos < a1), None) if t is main_t else None
+                        if sd is not None:
+                            # an overlay's own small data: its pointers are into that overlay
+                            target = resolve(w, next(x for x in targets if x.name == sd), True)
+                        else:
+                            # (an overlay's pointers into its small data may point inside an object)
+                            mine = any(a0 <= w < a1 and n == t.name for a0, a1, n in sdata)
+                            target = resolve(w, t, pos in interior or mine)
                     if target:
                         tt, kind, name = target
                         if kind in ("glabel", "alabel"):

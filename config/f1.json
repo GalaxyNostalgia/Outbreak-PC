@@ -70,5 +70,32 @@
     "func_743F50"
   ],
   "_pointer": "words (or [start, end) tables) that are pointers, possibly into the middle of an object: 0x6FD570 (game) is the enemy room lists by scenario",
-  "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex"
+  "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex",
+  "sdata": {
+    "demo": [
+      "0x0023A780",
+      "0x0023A790"
+    ],
+    "game": [
+      "0x0023A790",
+      "0x0023B3F0"
+    ],
+    "netwk": [
+      "0x0023B3F0",
+      "0x0023B8F8"
+    ],
+    "nethttp": [
+      "0x0023B8F8",
+      "0x0023B900"
+    ],
+    "single": [
+      "0x0023B900",
+      "0x0023B9B0"
+    ],
+    "netaq": [
+      "0x0023B9B0",
+      "0x0023B9BC"
+    ]
+  },
+  "_sdata": "the overlays' small (gp-relative) data, kept in the main executable's .sdata: which overlay each part's pointers point into"
 }
