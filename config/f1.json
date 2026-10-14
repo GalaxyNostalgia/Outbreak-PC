@@ -18,12 +18,18 @@
     "netaq"
   ],
   "pointer": [
-    ["0x006FD570", "0x006FD620"]
+    [
+      "0x006FD570",
+      "0x006FD620"
+    ]
   ],
   "number": [
     "0x00218E90",
     "0x00218E94",
-    ["0x00559540", "0x005595AC"]
+    [
+      "0x00559540",
+      "0x005595AC"
+    ]
   ],
   "_overlays": "all the overlays on the disc (EDITOR.BIN isn't): the game switches between them; submain stays resident and main's code uses its variables",
   "owners": {
@@ -33,6 +39,8 @@
     "D_599730": "netwk",
     "func_6AC010": "game",
     "func_822180": "netaq",
+    "func_00820F30": "netaq",
+    "func_00821130": "netaq",
     "func_00825DF0": "single",
     "func_008201D0": "single",
     "func_00821B50": "netaq",
@@ -44,9 +52,18 @@
     "func_00820820": "single",
     "func_00822760": "netaq",
     "func_00820F20": "netaq",
-    "func_00821570": "netaq"
+    "func_00821570": "netaq",
+    "func_00821750": "single",
+    "func_00821D00": "single",
+    "func_00821950": "single",
+    "func_00820AA0": "single",
+    "func_008229C0": "netaq",
+    "D_00825400": "netaq"
   },
-  "prefer": ["game", "single"],
+  "prefer": [
+    "game",
+    "single"
+  ],
   "_prefer": "when C names an address several overlays cover and \"owners\" doesn't say, the first of these that covers it",
   "_owners": "addresses the C names that several overlays cover: which overlay the code means",
   "pc_provided": [

@@ -184,9 +184,31 @@ int iso_find(const char *path, IsoFile *out) {
     return 0;
 }
 
+/* OUTBREAK_READLOG=<file>: append "<path> <offset> <size>" for every disc read (a developer aid:
+   with a folder holding only parts of the disc, it says which parts the game wanted). */
+static void log_read(const IsoFile *f, uint32_t offset, uint32_t size) {
+    static FILE *log;
+    static int tried;
+    if (!tried) {
+        const char *p = getenv("OUTBREAK_READLOG");
+        tried = 1;
+        if (p && *p) log = fopen(p, "a");
+    }
+    if (!log) return;
+    if (g_folder[0]) {
+        const char *name = f->lba < (uint32_t)g_nhost ? g_host[f->lba].path + strlen(g_folder) : "?";
+        while (*name == '/' || *name == '\\') name++;
+        fprintf(log, "%s %u %u\n", name, offset, size);
+    } else {
+        fprintf(log, "@%u %u %u\n", f->lba, offset, size);
+    }
+    fflush(log);
+}
+
 int64_t iso_read(const IsoFile *f, uint32_t offset, void *dst, uint32_t size) {
     if (offset >= f->size) return 0;
     if (size > f->size - offset) size = f->size - offset;
+    log_read(f, offset, size);
     if (g_folder[0]) return host_read(f, offset, dst, size);
     if (read_at((uint64_t)f->lba * SECTOR + offset, dst, size) != 0) return -1;
     return size;
