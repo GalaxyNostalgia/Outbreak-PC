@@ -58,7 +58,9 @@
     "func_00821950": "single",
     "func_00820AA0": "single",
     "func_008229C0": "netaq",
-    "D_00825400": "netaq"
+    "D_00825400": "netaq",
+    "func_00821170": "single",
+    "func_00820860": "netaq"
   },
   "prefer": [
     "game",
