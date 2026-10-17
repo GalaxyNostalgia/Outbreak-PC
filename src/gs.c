@@ -10,8 +10,10 @@
  */
 #include "gs.h"
 #include "log.h"
+#include "texcache.h"
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MEM_BYTES (4u * 1024 * 1024)
@@ -93,34 +95,48 @@ static uint32_t read_raw(uint32_t psm, uint32_t bp, uint32_t bw, uint32_t x, uin
     return 0;
 }
 
+/* Every write counts against its 8 KiB page, so cached decoded textures notice (texcache.h). */
+#define TOUCH_W(a) (g_tc_page_gen[(a) >> 11]++)     /* word address */
+#define TOUCH_H(a) (g_tc_page_gen[(a) >> 12]++)     /* halfword address */
+#define TOUCH_B(a) (g_tc_page_gen[(a) >> 13]++)     /* byte address */
+
 static void write_raw(uint32_t psm, uint32_t bp, uint32_t bw, uint32_t x, uint32_t y, uint32_t v) {
-    uint32_t *w;
+    uint32_t *w, a;
     switch (psm) {
-    case PSMCT32: case PSMZ32: g_mem.w[addr32(bp, bw, x, y)] = v; break;
+    case PSMCT32: case PSMZ32: a = addr32(bp, bw, x, y); g_mem.w[a] = v; TOUCH_W(a); break;
     case PSMCT24: case PSMZ24:
-        w = &g_mem.w[addr32(bp, bw, x, y)];
+        a = addr32(bp, bw, x, y);
+        w = &g_mem.w[a];
         *w = (*w & 0xFF000000u) | (v & 0xFFFFFF);
+        TOUCH_W(a);
         break;
-    case PSMCT16: case PSMZ16: g_mem.h[addr16(bp, bw, x, y, block16)] = (uint16_t)v; break;
-    case PSMCT16S: case PSMZ16S: g_mem.h[addr16(bp, bw, x, y, block16s)] = (uint16_t)v; break;
-    case PSMT8: g_mem.b[addr8(bp, bw, x, y)] = (uint8_t)v; break;
+    case PSMCT16: case PSMZ16: a = addr16(bp, bw, x, y, block16); g_mem.h[a] = (uint16_t)v; TOUCH_H(a); break;
+    case PSMCT16S: case PSMZ16S: a = addr16(bp, bw, x, y, block16s); g_mem.h[a] = (uint16_t)v; TOUCH_H(a); break;
+    case PSMT8: a = addr8(bp, bw, x, y); g_mem.b[a] = (uint8_t)v; TOUCH_B(a); break;
     case PSMT4: {
-        uint32_t a = addr4(bp, bw, x, y);
+        a = addr4(bp, bw, x, y);
         uint8_t *b = &g_mem.b[a >> 1];
         *b = (a & 1) ? (uint8_t)((*b & 0x0F) | (v << 4)) : (uint8_t)((*b & 0xF0) | (v & 15));
+        TOUCH_B(a >> 1);
         break;
     }
     case PSMT8H:
-        w = &g_mem.w[addr32(bp, bw, x, y)];
+        a = addr32(bp, bw, x, y);
+        w = &g_mem.w[a];
         *w = (*w & 0x00FFFFFFu) | (v << 24);
+        TOUCH_W(a);
         break;
     case PSMT4HL:
-        w = &g_mem.w[addr32(bp, bw, x, y)];
+        a = addr32(bp, bw, x, y);
+        w = &g_mem.w[a];
         *w = (*w & 0xF0FFFFFFu) | ((v & 15) << 24);
+        TOUCH_W(a);
         break;
     case PSMT4HH:
-        w = &g_mem.w[addr32(bp, bw, x, y)];
+        a = addr32(bp, bw, x, y);
+        w = &g_mem.w[a];
         *w = (*w & 0x0FFFFFFFu) | ((v & 15) << 28);
+        TOUCH_W(a);
         break;
     }
 }
@@ -174,6 +190,7 @@ static struct {
 void gs_reset(void) {
     memset(&g, 0, sizeof g);
     memset(&g_mem, 0, sizeof g_mem);
+    tc_reset();
     g.prmodecont = 1;
     g.colclamp = 1;
     g.q = 1.0f;
@@ -193,10 +210,13 @@ typedef struct {
     int tme, fst, tfx, tcc;
     uint32_t tbp, tbw, tpsm, tw, th, cbp, cpsm, csm, csa;
     uint32_t wms, wmt, minu, maxu, minv, maxv;
+    const uint32_t *tex;        /* the texture decoded (texcache.h), or NULL: sample GS memory */
     /* tests and blending */
     int ate, atst, aref, afail, date, datm, abe;
     uint32_t alpha;
 } DrawState;
+
+static void use_texture_cache(DrawState *d);
 
 static void setup(DrawState *d) {
     uint64_t p = bits(g.prmodecont, 0, 1) ? g.prim : g.prmode;
@@ -240,6 +260,7 @@ static void setup(DrawState *d) {
     d->date = (int)bits(c->test, 14, 1);
     d->datm = (int)bits(c->test, 15, 1);
     d->alpha = (uint32_t)c->alpha;
+    use_texture_cache(d);
 }
 
 static uint32_t wrap(uint32_t mode, int32_t c, uint32_t size, uint32_t min, uint32_t max) {
@@ -280,8 +301,8 @@ static uint32_t clut_lookup(const DrawState *d, uint32_t index) {
     return expand16(read_raw(cpsm == PSMCT16S ? PSMCT16S : PSMCT16, d->cbp, 1, x, y));
 }
 
-static uint32_t texel(const DrawState *d, int32_t u, int32_t v) {
-    uint32_t x = wrap(d->wms, u, d->tw, d->minu, d->maxu), y = wrap(d->wmt, v, d->th, d->minv, d->maxv);
+/* The texel at (x, y) of the texture, as RGBA8888. */
+static uint32_t texel_at(const DrawState *d, uint32_t x, uint32_t y) {
     uint32_t raw = read_raw(d->tpsm, d->tbp, d->tbw, x, y);
     switch (d->tpsm) {
     case PSMCT32: case PSMZ32: return raw;
@@ -290,6 +311,30 @@ static uint32_t texel(const DrawState *d, int32_t u, int32_t v) {
     case PSMCT16: case PSMCT16S: case PSMZ16: case PSMZ16S: return expand16(raw);
     default: return clut_lookup(d, raw);
     }
+}
+
+static inline uint32_t texel(const DrawState *d, int32_t u, int32_t v) {
+    uint32_t x = wrap(d->wms, u, d->tw, d->minu, d->maxu), y = wrap(d->wmt, v, d->th, d->minv, d->maxv);
+    if (d->tex && x < d->tw && y < d->th) return d->tex[y * d->tw + x];
+    return texel_at(d, x, y);
+}
+
+static void decode_texture(void *ctx, uint32_t *out) {
+    const DrawState *d = ctx;
+    for (uint32_t y = 0; y < d->th; y++)
+        for (uint32_t x = 0; x < d->tw; x++) *out++ = texel_at(d, x, y);
+}
+
+/* The primitive's texture from the cache (when it can be cached). */
+static void use_texture_cache(DrawState *d) {
+    static int off = -1;
+    if (off < 0) off = getenv("OUTBREAK_NO_TEXCACHE") != NULL;
+    d->tex = NULL;
+    if (!d->tme || d->csm || off) return;
+    TexKey k = {d->tbp, d->tbw, d->tpsm, d->tw, d->th, d->cbp, d->cpsm, d->csa, g.texa};
+    if (!(d->tpsm == PSMT8 || d->tpsm == PSMT4 || d->tpsm == PSMT8H || d->tpsm == PSMT4HL || d->tpsm == PSMT4HH))
+        k.cbp = k.cpsm = k.csa = 0;
+    d->tex = tc_get(&k, decode_texture, d);
 }
 
 static inline uint32_t clamp8(int32_t v, int clampmode) {
@@ -476,7 +521,9 @@ static void draw_sprite(const Vertex *v0, const Vertex *v1) {
         int wz = d.zte && !d.zmsk;
         for (int32_t y = y0; y < y1; y++)
             for (int32_t x = x0; x < x1; x++) {
-                g_mem.w[addr32(d.fbp, d.fbw, (uint32_t)x, (uint32_t)y)] = col;
+                uint32_t a = addr32(d.fbp, d.fbw, (uint32_t)x, (uint32_t)y);
+                g_mem.w[a] = col;
+                TOUCH_W(a);
                 if (wz) write_raw(d.zpsm, d.zbp, d.fbw, (uint32_t)x, (uint32_t)y, v1->z);
             }
         return;

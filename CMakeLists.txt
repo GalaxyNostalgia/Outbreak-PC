@@ -8,7 +8,13 @@
 # Needs the decomp (git submodule in decomp/) configured with your own disc first:
 #   cd decomp && python configure.py f1
 cmake_minimum_required(VERSION 3.19)
-project(outbreak_pc C ASM)
+project(outbreak_pc C CXX ASM)
+# The game code is C (it must stay compilable to the original by the PS2 compiler); the platform
+# layer is C, with C++ where it pays off (texcache.cpp so far). No exceptions or RTTI: the C++ is
+# used for containers and types, and the Windows build links its runtime statically.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "build type" FORCE)   # the software GS needs the optimizer
 endif()
@@ -32,13 +38,18 @@ endif()
 if(WIN32)
   # PS2 (GCC-style) bitfield layout, not Microsoft's
   add_compile_options(-mno-ms-bitfields)
+else()
+  # the executable is linked -no-pie; position-independent code would cost i386 a register and a
+  # call per function to find its globals (the software GS spends most of its time in such calls)
+  add_compile_options(-fno-pie)
 endif()
 
 set(PLATFORM_SOURCES src/iso9660.c src/sce_io.c src/libc_extra.c src/log.c src/gs.c src/display.c src/sce_graph.c src/cri_adx.c src/sce_cdvd.c src/overlay.c src/tsnddrv.c
-    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c src/sofdec.c)
+    src/ps2ram.c src/hw.c src/kernel.c src/sce_sif.c src/sound.c src/asm.c src/dma.c src/pad.c src/mc2.c src/usbkb.c src/dnas.c src/sofdec.c src/texcache.cpp)
 add_library(platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(platform PUBLIC src PRIVATE ${OUTBREAK_DECOMP_DIR}/include)
-target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing)
+target_compile_options(platform PRIVATE -Wall -Wextra -Wno-unused-parameter -fno-strict-aliasing
+                       $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
 target_compile_definitions(platform PRIVATE _FILE_OFFSET_BITS=64 PLATFORM_PC)
 
 # SDL2 for the window (optional: without it the program runs headless and can dump frames)

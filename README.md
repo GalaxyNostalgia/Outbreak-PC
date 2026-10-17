@@ -57,12 +57,12 @@ system, or the QuickLoading set-up).
    build/outbreak-f1.exe "/c/path/to/your/Biohazard Outbreak.iso"
    ```
 
-From Linux you can cross-compile the same `.exe`: `sudo apt install gcc-mingw-w64-i686`, unpack SDL2's
+From Linux you can cross-compile the same `.exe`: `sudo apt install gcc-mingw-w64-i686 g++-mingw-w64-i686`, unpack SDL2's
 `SDL2-devel-2.30.9-mingw.tar.gz`, then
 `cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DSDL2_DIR=<SDL2>/i686-w64-mingw32/lib/cmake/SDL2`.
 SDL2 is linked statically, so the result is a single `.exe`. Without SDL2 the build is headless:
 `--dump-frames DIR` writes each new picture to a file. A 32-bit Linux build also works
-(`-DCMAKE_C_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32`), but Windows is the main platform.
+(`-DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_ASM_FLAGS=-m32`, with `gcc-multilib g++-multilib`), but Windows is the main platform.
 
 ## How it works
 

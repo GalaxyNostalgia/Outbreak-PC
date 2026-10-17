@@ -93,3 +93,19 @@ decomp writes these as `PS2_RAM(0x01000000)` (`decomp/include/ps2mem.h`); on PC 
 
 The PS2 FPU isn't IEEE: no infinities, NaNs or denormals, and it rounds differently. If online play shows
 desyncs, the gameplay code involved will use PS2-accurate float helpers on PC.
+
+## C and C++
+
+The game code is C and stays C: the same files must compile to the original with the PS2 compiler.
+The platform layer is C, with C++17 (no exceptions or RTTI, C interfaces) where it pays off:
+- `src/texcache.cpp`: decoded textures. The software GS used to decode every texel it sampled
+  (swizzled addressing, CLUT lookup, 16-bit expansion); textures used repeatedly are now decoded once
+  and reused until their GS memory pages are written (every GS write bumps its 8 KiB page's count).
+  Textures rewritten about as often as they're drawn (movie frames) aren't decoded at all. Output is
+  identical (`OUTBREAK_NO_TEXCACHE=1` turns it off for comparison); the native renderer will upload
+  from the same cache.
+- next: the native 3D renderer (VU1 packets to the GPU) and the Obsrv network layer.
+
+The 32-bit Linux build compiles with `-fno-pie` (it is linked `-no-pie`): position-independent i386
+code spends a register and a call per function on finding its globals, which cost the software GS
+about 8%.
