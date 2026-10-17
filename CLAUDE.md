@@ -65,8 +65,15 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 
 ## MWCC (mwccps2) habits that matter
 
-- Leaf functions defined earlier in the file (static or not) let callers keep values in `a`/`t`
-  registers across the call; other callees force `s` registers.
+- Leaf functions defined earlier in the file let callers keep values in `a`/`t` registers across
+  the call; other callees force `s` registers. Seen not to happen for a non-static callee in some
+  cases (game/roomsets.c func_0067B020): if the original's callers keep values across a call to a
+  leaf whose callers are all nearby, it was probably static there; it can only be made static once
+  every caller is in C (asm callers need the global symbol).
+- `field + (u32)ptr` vs `ptr + field`: which is loaded first follows the field's signedness
+  (an `s32` offset field gave the original's order in anim.c and keyframe.c).
+- Evaluation order of call arguments follows the prototype's parameter order, so it can tell a
+  float parameter's position (keyframe.c: `f32 frame` first).
 - Globals of 8 bytes or less are `$gp`-relative when declared with a size; declare them unsized
   (`extern T x[];`) or as a bigger struct to get `lui`/absolute addressing. Struct fields give a
   fresh `lui` per access; a local pointer gets CSE'd.
