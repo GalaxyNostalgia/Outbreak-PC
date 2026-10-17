@@ -69,7 +69,8 @@
   "_prefer": "when C names an address several overlays cover and \"owners\" doesn't say, the first of these that covers it",
   "_owners": "addresses the C names that several overlays cover: which overlay the code means",
   "pc_provided": [
-    "func_743F50"
+    "func_743F50",
+    "func_003405D0"
   ],
   "_pointer": "words (or [start, end) tables) that are pointers, possibly into the middle of an object: 0x6FD570 (game) is the enemy room lists by scenario",
   "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex",

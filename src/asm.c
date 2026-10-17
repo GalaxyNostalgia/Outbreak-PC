@@ -368,3 +368,11 @@ f32 func_001916E0(const f32 *a, const f32 *b) {
 f32 func_001917C0(const f32 *a, const f32 *b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 
 void func_00191820(f32 *out, const f32 *a, const f32 *b) { cross3(out, a, b); }
+
+/* SUBMAIN.BIN's VU0 helper: out = v * s. */
+void func_003405D0(f32 s, f32 *out, const f32 *v) {
+    f32 x = v[0] * s, y = v[1] * s, z = v[2] * s;
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
+}
