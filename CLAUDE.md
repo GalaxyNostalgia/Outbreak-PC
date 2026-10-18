@@ -84,6 +84,16 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - A void-looking function whose early `return` jumps past `ld ra` may really return a value from
   that point and fall off the end elsewhere.
 - Read the raw asm (with nops) before trusting an m2c draft; m2c drops `t0`-`t3` arguments.
+- Branch layout tells the control flow: a test whose then-block sits *after* the else-block is a
+  one-case `switch` (`switch (x) { case 3: ...; break; default: ... }`); `case` compares come
+  out in reverse of the listing; `default:` listed first puts its code right after the compares;
+  an empty `case 0: break;` before a second switch gives an explicit `beqz` to it.
+- A `struct` field access beats `FIELD(p, T, off)`: the macro's address arithmetic gets CSE'd
+  into a register (`addiu a1,s0,off`). Add the field to the header instead.
+- A function reached only through a table of function pointers, placed right after another
+  one's tail call, is merged into it by splat: add `func_X = 0xX; // type:func` to
+  `config/<ELF>/<ovl>.symbol_addrs.txt`, move `asm/<ELF>/<ovl>` (and `en/<ovl>`) away and rerun
+  `configure.py` (needs `pip install -r requirements.txt`).
 
 ## Where things are
 
