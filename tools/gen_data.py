@@ -358,7 +358,11 @@ def main():
         print(f"[{t.name}] {sum(e - s for s, e in t.data_ranges):,} data bytes, {t.bss[1] - t.bss[0]:,} bss bytes; "
               + ", ".join(f"{v} {k}" for k, v in stats.items()))
         if t.prefix:
-            names = sorted({n for addr, ls in t.labels.items() for _, n in ls if t.owns(addr)})
+            names = {n for addr, ls in t.labels.items() for _, n in ls if t.owns(addr)}
+            # C may name a jump table (jtbl_) or other label as D_<addr>
+            names |= {r for r in refs.get(t.name, set())
+                      if re.fullmatch(r"D_[0-9A-F]{8}", r) and t.owns(int(r[2:], 16))}
+            names = sorted(names)
             (a.out / f"names_{t.name}.h").write_text(
                 f"/* generated: {t.name} overlay symbols get the prefix {t.prefix} on PC */\n"
                 + "".join(f"#define {n} {t.prefix}{n}\n" for n in names if re.fullmatch(r"(func|D)_[0-9A-F]{8}", n)))
