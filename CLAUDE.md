@@ -95,6 +95,15 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
   `config/<ELF>/<ovl>.symbol_addrs.txt`, move `asm/<ELF>/<ovl>` (and `en/<ovl>`) away and rerun
   `configure.py` (needs `pip install -r requirements.txt`).
 
+- A local whose address is passed on: a `u16` sits at the end of its 4-byte stack slot (sp+2);
+  the original's at the slot start was an `s32` read back as `u16` (collision.c / charmove.c
+  func_0062DAE0). `Vec3` (struct) locals copy with `ld`/`sd`; `f32[3]` ones word by word.
+- Unsolved, seen often: the original leaves a `nop` in a branch's delay slot (or `b` to a shared
+  `return 0`) where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
+  Don't spend long on these: NON_MATCHING.
+- A PC crash reading game tables: check the words gen_data relocated. Tables of `u16` pairs can
+  look like pointers (0x0071xxxx); add them to `number` in `config/f1.json`.
+
 ## Where things are
 
 - `config/f1.json`: how gen_data treats the game's data — `owners` (which overlay an address
