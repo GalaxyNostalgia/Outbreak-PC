@@ -29,6 +29,10 @@
     [
       "0x00559540",
       "0x005595AC"
+    ],
+    [
+      "0x006F1990",
+      "0x006F3000"
     ]
   ],
   "_overlays": "all the overlays on the disc (EDITOR.BIN isn't): the game switches between them; submain stays resident and main's code uses its variables",
@@ -75,7 +79,7 @@
     "func_003405D0", "func_00340410"
   ],
   "_pointer": "words (or [start, end) tables) that are pointers, possibly into the middle of an object: 0x6FD570 (game) is the enemy room lists by scenario",
-  "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex",
+  "_number": "words (or [start, end) ranges) that look like addresses but aren't: 0x218E80 and 0x559540 (demo) are tables of offsets into demo_com.tex and select.tex; 0x6F1990-0x6F3000 (game) the motion tables (u16 ids whose pairs look like 0x0071xxxx)",
   "sdata": {
     "demo": [
       "0x0023A780",
