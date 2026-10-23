@@ -98,6 +98,9 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - A local whose address is passed on: a `u16` sits at the end of its 4-byte stack slot (sp+2);
   the original's at the slot start was an `s32` read back as `u16` (collision.c / charmove.c
   func_0062DAE0). `Vec3` (struct) locals copy with `ld`/`sd`; `f32[3]` ones word by word.
+- A list walk whose every path ends in `b` to the loop test with `lw next` in its delay slot:
+  write `z = z->next;` at the end of each branch, an `else { z = z->next; }` included (scriptops.c
+  func_005518B0, func_0065E880, func_00660A70). Seen as "nop in the delay slot" otherwise.
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot (or `b` to a shared
   `return 0`) where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
