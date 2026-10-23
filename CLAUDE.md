@@ -101,6 +101,13 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot (or `b` to a shared
   `return 0`) where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
+- An explicit `& 0xFF` / `& 0xFFFF` keeps a mask that a cast folds away: `(s16)f & 0xFFFF` gave
+  the original's sign-extend-then-mask (charmove.c ANG), `(a & 0xFF) != (b & 0xFF)` its extra
+  `andi` on a loaded byte (scene.c func_00680AB0).
+- A pointer added to an offset field: `(u8 *)(f->ofs + (s32)ptr)` can be the only order that
+  matches (mapdata.c func_006A7BE0).
+- A call whose argument count looks short: check `t0`-`t3` in the caller (func_006A6140 takes a
+  fifth argument its caller sets in a delay slot).
 - A PC crash reading game tables: check the words gen_data relocated. Tables of `u16` pairs can
   look like pointers (0x0071xxxx); add them to `number` in `config/f1.json`.
 
