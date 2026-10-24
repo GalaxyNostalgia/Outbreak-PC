@@ -362,7 +362,7 @@ def main():
             # C may name a jump table (jtbl_) or other label as D_<addr>
             names |= {r for r in refs.get(t.name, set())
                       if re.fullmatch(r"D_[0-9A-F]{8}", r) and t.owns(int(r[2:], 16))}
-            names = sorted(names)
+            names = sorted(names - pc_replaced)     # the PC's own versions keep the plain name
             (a.out / f"names_{t.name}.h").write_text(
                 f"/* generated: {t.name} overlay symbols get the prefix {t.prefix} on PC */\n"
                 + "".join(f"#define {n} {t.prefix}{n}\n" for n in names if re.fullmatch(r"(func|D)_[0-9A-F]{8}", n)))
