@@ -104,8 +104,10 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - A compare done into `$at` (`slti at,...; beqz at`): the original's `if` assigns in *both*
   branches, even when the then-assignment is redundant (`if (x < 0x1000) { r = -1; } else
   { r = 2; }` with r already -1: single/partner.c func_0082B870).
-- Unsolved, seen often: the original leaves a `nop` in a branch's delay slot (or `b` to a shared
-  `return 0`) where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
+- `b` to a shared `return 0` with a `nop` in its delay slot: the original returns 0 once at the end
+  and its branches `break` out of the switch to it (game/charmove.c func_006337C0); a one-case test
+  that branches over a `b` is a one-case `switch`.
+- Unsolved, seen often: the original leaves a `nop` in a branch's delay slot where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
 - An explicit `& 0xFF` / `& 0xFFFF` keeps a mask that a cast folds away: `(s16)f & 0xFFFF` gave
   the original's sign-extend-then-mask (charmove.c ANG), `(a & 0xFF) != (b & 0xFF)` its extra
