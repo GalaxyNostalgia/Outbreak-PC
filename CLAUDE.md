@@ -101,6 +101,9 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - A list walk whose every path ends in `b` to the loop test with `lw next` in its delay slot:
   write `z = z->next;` at the end of each branch, an `else { z = z->next; }` included (scriptops.c
   func_005518B0, func_0065E880, func_00660A70). Seen as "nop in the delay slot" otherwise.
+- A compare done into `$at` (`slti at,...; beqz at`): the original's `if` assigns in *both*
+  branches, even when the then-assignment is redundant (`if (x < 0x1000) { r = -1; } else
+  { r = 2; }` with r already -1: single/partner.c func_0082B870).
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot (or `b` to a shared
   `return 0`) where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
