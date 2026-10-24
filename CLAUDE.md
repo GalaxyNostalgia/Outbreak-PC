@@ -116,6 +116,10 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
   `andi` on a loaded byte (scene.c func_00680AB0).
 - A pointer added to an offset field: `(u8 *)(f->ofs + (s32)ptr)` can be the only order that
   matches (mapdata.c func_006A7BE0).
+- A float argument passed straight through (`f12` left alone) leaves no trace in a dispatcher's
+  asm, but the PC build loses it: check the callees for `mov.s f20,f12` and give the whole chain
+  the parameter (objmot.c func_00543410 -> func_005654D0 / thingmot.c func_00578B30 -> the
+  per-kind step functions all take the motion speed).
 - A call whose argument count looks short: check `t0`-`t3` in the caller (func_006A6140 takes a
   fifth argument its caller sets in a delay slot).
 - A PC crash reading game tables: check the words gen_data relocated. Tables of `u16` pairs can
