@@ -107,6 +107,8 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - `b` to a shared `return 0` with a `nop` in its delay slot: the original returns 0 once at the end
   and its branches `break` out of the switch to it (game/charmove.c func_006337C0); a one-case test
   that branches over a `b` is a one-case `switch`.
+- Unsolved: a jump table indexed with `addi` (m2c marks it "handwritten") where ours uses `addiu`
+  (charmove.c func_0063A940, single/partner.c func_0082BB30); no compiler or flag tried gives it.
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
 - An explicit `& 0xFF` / `& 0xFFFF` keeps a mask that a cast folds away: `(s16)f & 0xFFFF` gave

@@ -324,7 +324,7 @@ void func_00191110(f32 *m, const f32 *a, const f32 *b) {
 }
 
 /* Blends two matrices (rows 0, 1 and 3 by s and u) and makes rows 0-2 orthonormal again. */
-void func_001912D0(f32 s, f32 u, f32 *out, const f32 *a, const f32 *b) {
+void func_001912D0(f32 *out, const f32 *a, const f32 *b, f32 s, f32 u) {
     f32 x[3], y[3], z[3], t[3];
     for (int k = 0; k < 3; k++) {
         x[k] = a[k] * s + b[k] * u;
