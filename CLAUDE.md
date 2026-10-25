@@ -111,7 +111,7 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
   (charmove.c func_0063A940, single/partner.c func_0082BB30); no compiler or flag tried gives it.
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   (The latter can be the branch layout: `if (p == 0) return 0; } else { n--; return 0; } ...
-  return 1;` matched npcs.c func_0068B4E0.)
+  return 1;` matched npcs.c func_0068B4E0.) Don't spend long on these: NON_MATCHING.
 - The prototype a caller sees moves its argument loads: with `func_0064FD50(s32, u8 slot)` the
   caller copied `a0` to `s0` before loading `slot`; the original's `(s32, s32)` loads it first
   (npcs.c func_0068B150, func_0068B4E0).
@@ -128,7 +128,6 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - Table fields at a symbol + offset (splat names it `D_xxx1`, `D_xxx2`): the original indexed
   with its own local (`s32 i = (m & 0xFFFF) - 1; tbl[i][1]`), so the offset folds into the
   relocation (sebank.c func_001B75E0).
-  Don't spend long on these: NON_MATCHING.
 - A chain of `x != A && x != B ...` tests whose `beq`s keep a `nop` in the delay slot (ours fills
   them with the next constant) is a `switch` with the cases falling through to one `break`, listed
   in reverse of the compares (roomitems.c func_005621E0).
