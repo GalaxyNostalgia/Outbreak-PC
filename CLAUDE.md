@@ -111,6 +111,9 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
   (charmove.c func_0063A940, single/partner.c func_0082BB30); no compiler or flag tried gives it.
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
   Don't spend long on these: NON_MATCHING.
+- A chain of `x != A && x != B ...` tests whose `beq`s keep a `nop` in the delay slot (ours fills
+  them with the next constant) is a `switch` with the cases falling through to one `break`, listed
+  in reverse of the compares (roomitems.c func_005621E0).
 - An explicit `& 0xFF` / `& 0xFFFF` keeps a mask that a cast folds away: `(s16)f & 0xFFFF` gave
   the original's sign-extend-then-mask (charmove.c ANG), `(a & 0xFF) != (b & 0xFF)` its extra
   `andi` on a loaded byte (scene.c func_00680AB0).
