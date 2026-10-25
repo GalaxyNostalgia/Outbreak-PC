@@ -110,6 +110,24 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - Unsolved: a jump table indexed with `addi` (m2c marks it "handwritten") where ours uses `addiu`
   (charmove.c func_0063A940, single/partner.c func_0082BB30); no compiler or flag tried gives it.
 - Unsolved, seen often: the original leaves a `nop` in a branch's delay slot where ours fills it; and `if (x) return 1; return 0;` that ours folds into `sltu`.
+  (The latter can be the branch layout: `if (p == 0) return 0; } else { n--; return 0; } ...
+  return 1;` matched npcs.c func_0068B4E0.)
+- The prototype a caller sees moves its argument loads: with `func_0064FD50(s32, u8 slot)` the
+  caller copied `a0` to `s0` before loading `slot`; the original's `(s32, s32)` loads it first
+  (npcs.c func_0068B150, func_0068B4E0).
+- An `s8` sign-extended again (`dsll32`/`dsra32` 24) at the start of a block: the original kept it
+  in an `s32` local and cast `(s8)` where used (talk.c func_00686F80, charsync.c func_005C9210).
+  The same right after a call: the callee returns `s32` and the caller casts `(s8)` (partner.c
+  func_00823780).
+- `daddiu` for a small constant: the local is `u8`/`u16`. A `u16` compared with a float converts
+  by the unsigned path (`bltz`, `srl`, `or`, `add.s`): charmove.c func_0058C4C0's `u16 step`.
+- A leaf with a single caller can be made `static` (then the caller keeps `a` registers across
+  it); both wait for the leaf to match (npcs.c func_005F3C30 / func_005F3C90).
+- A component written twice (`d.y = ...; d.y = 0`) without a CSE'd pointer: write the vector
+  through `f32 *p = &d.x` and the second store through the struct (charmove.c func_006343D0).
+- Table fields at a symbol + offset (splat names it `D_xxx1`, `D_xxx2`): the original indexed
+  with its own local (`s32 i = (m & 0xFFFF) - 1; tbl[i][1]`), so the offset folds into the
+  relocation (sebank.c func_001B75E0).
   Don't spend long on these: NON_MATCHING.
 - A chain of `x != A && x != B ...` tests whose `beq`s keep a `nop` in the delay slot (ours fills
   them with the next constant) is a `switch` with the cases falling through to one `break`, listed
