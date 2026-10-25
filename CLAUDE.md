@@ -125,6 +125,12 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
   per-kind step functions all take the motion speed).
 - A call whose argument count looks short: check `t0`-`t3` in the caller (func_006A6140 takes a
   fifth argument its caller sets in a delay slot).
+- The reverse too: an `a1` set before a call may be for the *next* call (in a branch's delay
+  slot) or left over; check the callee's asm reads it (talk.c func_00687130 takes only the
+  speaker; with a second parameter its caller couldn't match).
+- A caller that keeps a value in an `a`/`t` register across a call to a leaf can only match once
+  that leaf is matching C defined earlier in the file (talk.c func_006862A0 waits on
+  func_00685190).
 - A PC crash reading game tables: check the words gen_data relocated. Tables of `u16` pairs can
   look like pointers (0x0071xxxx); add them to `number` in `config/f1.json`.
 
