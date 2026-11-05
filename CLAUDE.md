@@ -148,6 +148,16 @@ wrap it with `tools/dev/nonmatch.py file.c func "why"` (the PC build compiles NO
 - A caller that keeps a value in an `a`/`t` register across a call to a leaf can only match once
   that leaf is matching C defined earlier in the file (talk.c func_006862A0 waits on
   func_00685190).
+- `x > 1` and `x >= 2` differ: on a `u8` field, `> 1` gave the original's `slti at,v0,2`
+  (gametask.c func_005BD690).
+- A pointer passed to an `s32` parameter is computed before the other arguments; with a `char *`
+  parameter it comes last (mapdata.c func_006A4D10 calling func_001ADA60).
+- A call that passes nothing to a function with a parameter (a0 left over): declare it
+  unprototyped, `void f();` (gametask.c func_005BF6E0).
+- A loop over an array of structs whose field addresses sit in their own `s` registers
+  (`addiu s1,v1,0x138` / `addiu s6,v1,0x13C`): take them into local pointers before the inner
+  loop (`s8 *ty = &w.sets[i].type;`), and the row of a second array first (gametask.c
+  func_005BDEA0).
 - A PC crash reading game tables: check the words gen_data relocated. Tables of `u16` pairs can
   look like pointers (0x0071xxxx); add them to `number` in `config/f1.json`.
 
